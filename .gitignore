@@ -13,3 +13,8 @@ log.txt
 traceback.txt
 errors.txt
 *.apk
+
+sideload/*
+!sideload/README.txt
+incoming/*
+!incoming/.gitkeep

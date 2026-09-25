@@ -1,0 +1,34 @@
+<!-- Зачем этот файл: фрагмент, уже вставленный в
+     rapt/project/app/src/main/AndroidManifest.xml
+     Пакет приложения: com.artemdev.sideloadlab -->
+
+<!-- В тег application добавлен атрибут: -->
+<!-- android:requestLegacyExternalStorage="true" -->
+
+<activity
+    android:name="com.artemdev.sideloadlab.LauncherActivity"
+    android:label="@string/iconName"
+    android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+    android:screenOrientation="sensorLandscape">
+
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+
+</activity>
+
+<!-- PythonSDLActivity остаётся в манифесте, но без MAIN и без LAUNCHER. -->
+<activity
+    android:name="org.renpy.android.PythonSDLActivity"
+    android:label="@string/iconName"
+    android:alwaysRetainTaskState="true"
+    android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+    android:launchMode="singleTop"
+    android:screenOrientation="sensorLandscape">
+</activity>
+
+<!-- WRITE_EXTERNAL_STORAGE уже был. Добавлены READ и MANAGE. -->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
