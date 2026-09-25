@@ -57,6 +57,7 @@ screen sideload_status():
     tag menu
 
     default entries = sideload_entries()
+    $ sideload_path_text = sideload_directory()
 
     use game_menu(_("Sideload"), scroll="viewport"):
 
@@ -65,7 +66,7 @@ screen sideload_status():
 
             text _("External folder. New .rpy scripts and images placed here are loaded through config.searchpath. Restart the game after adding files.")
 
-            text _("Path: [sideload_directory()]")
+            text _("Path: [sideload_path_text]")
 
             if sideload_is_ready():
                 text _("This folder is on config.searchpath.")
@@ -88,8 +89,8 @@ translate russian strings:
     old "External folder. New .rpy scripts and images placed here are loaded through config.searchpath. Restart the game after adding files."
     new "Внешняя папка. Новые .rpy и картинки отсюда подхватываются через config.searchpath. После добавления файлов игру нужно перезапустить."
 
-    old "Path: [sideload_directory()]"
-    new "Путь: [sideload_directory()]"
+    old "Path: [sideload_path_text]"
+    new "Путь: [sideload_path_text]"
 
     old "This folder is on config.searchpath."
     new "Эта папка стоит в config.searchpath."
