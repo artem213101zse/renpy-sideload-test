@@ -36,4 +36,6 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Сейвы: `python early` ставит `config.savedir` в `Documents/the_question_sideload/saves` на Android и в `the_question/sideload/saves` на ПК. BIOS экспортирует и импортирует zip до запуска Python.
 
+Поделиться сейвами: FileProvider из support-v4 отдаёт только `Documents/the_question_sideload/backups`. Кнопка «Поделиться сейвами» сначала делает экспорт, если бэкапов нет, и шлёт zip через ACTION_SEND.
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.

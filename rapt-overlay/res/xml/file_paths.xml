@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Зачем: FileProvider отдаёт только zip бэкапов сейвов.
+     Корень — внешнее хранилище, путь сужен до Documents/the_question_sideload/backups.
+     Вся Documents и остальной диск сюда не входят. -->
+<paths>
+    <external-path
+        name="save_backups"
+        path="Documents/the_question_sideload/backups" />
+</paths>

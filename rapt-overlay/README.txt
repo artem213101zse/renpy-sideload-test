@@ -41,6 +41,12 @@ Zip из incoming распаковывается прямо в the_question_side
    rapt/project/renpyandroid/src/main/res/values/sideload_bios.xml
    У activity лаунчера в манифесте стоит android:theme="@style/SideloadBiosTheme".
 
+4. FileProvider
+   rapt-overlay/res/xml/file_paths.xml
+   Куда: rapt/project/renpyandroid/src/main/res/xml/file_paths.xml
+   Открывает только Documents/the_question_sideload/backups.
+   Класс: android.support.v4.content.FileProvider из appcompat-v7.
+
 Если RAPT собирает проект с update_always, шаблон
 rapt/templates/app-AndroidManifest.xml снова затирает манифест.
 Тогда фрагмент нужно вставить ещё раз. Сам Java-класс шаблон не затирает.

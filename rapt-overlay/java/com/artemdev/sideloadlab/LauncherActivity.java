@@ -5,8 +5,10 @@
 package com.artemdev.sideloadlab;
 
 import android.app.Activity;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.support.v4.content.FileProvider;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -82,6 +84,12 @@ public class LauncherActivity extends Activity {
             @Override
             public void onClick(View v) {
                 importSaves();
+            }
+        });
+        findViewById(R.id.bios_share_saves).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                shareSaves();
             }
         });
         findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
@@ -652,6 +660,35 @@ public class LauncherActivity extends Activity {
             if (in != null) {
                 in.close();
             }
+        }
+    }
+
+    private void shareSaves() {
+        if (newestBackupZip() == null) {
+            exportSaves();
+        }
+        File zip = newestBackupZip();
+        if (zip == null || !zip.isFile()) {
+            appendStatus("\nПоделиться: нет zip бэкапа.");
+            logLine("share no zip");
+            return;
+        }
+        try {
+            String authority = getPackageName() + ".fileprovider";
+            Uri uri = FileProvider.getUriForFile(this, authority, zip);
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("application/zip");
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.setClipData(ClipData.newRawUri("saves", uri));
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent chooser = Intent.createChooser(send, "Отправить бэкап");
+            chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(chooser);
+            appendStatus("\nПоделиться " + zip.getAbsolutePath());
+            logLine("share " + zip.getAbsolutePath());
+        } catch (Exception e) {
+            appendStatus("\nПоделиться не удалось: " + messageOf(e));
+            logLine("share failed " + messageOf(e));
         }
     }
 
