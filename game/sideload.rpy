@@ -88,6 +88,11 @@ screen sideload_status():
             else:
                 text _("Мод ещё не загружен. Распакуйте zip в папку sideload и перезапустите игру.")
 
+            if renpy.android:
+                textbutton _("BIOS") action Function(open_sideload_bios)
+                if bios_open_note:
+                    text bios_open_note substitute False
+
             textbutton _("Удалить мод") action Function(sideload_remove_mod)
             text "Пока процесс жив, метка extra_inject останется. Она снимется после перезапуска."
             if sideload_remove_note:

@@ -326,6 +326,11 @@ screen navigation():
         ## Sideload folder status. The folder itself is attached in sideload.rpe.
         textbutton _("Sideload") action ShowMenu("sideload_status")
 
+        if renpy.android:
+            textbutton _("BIOS") action Function(open_sideload_bios)
+            if bios_open_note:
+                text bios_open_note substitute False
+
         if renpy.variant("pc"):
 
             ## The quit button is banned on iOS and unnecessary on Android and Web.

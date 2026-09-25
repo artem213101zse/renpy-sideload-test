@@ -31,3 +31,5 @@ BIOS: экран лаунчера больше не серый. Фон `#1a1420`
 Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inject`.
 
 Качалка BIOS: кнопка «Скачать мод» берёт `tools/sample_mod.zip` с raw GitHub в `Documents/the_question_sideload/incoming/sample_mod.zip`, пишет проценты и сразу ставит zip.
+
+Кнопка BIOS только на Android: через jnius открывает `LauncherActivity` и закрывает `PythonSDLActivity`. Если jnius или класс не найдены, на экране короткое сообщение.
