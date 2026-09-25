@@ -89,7 +89,7 @@ screen sideload_status():
                 text _("Мод ещё не загружен. Распакуйте zip в папку sideload и перезапустите игру.")
 
             textbutton _("Запустить движок") action Function(run_hello_engine)
-            text "[last_engine_line]"
+            text last_engine_line
 
 
 translate russian strings:

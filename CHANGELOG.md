@@ -15,3 +15,5 @@
 Заглушка движка: `tools/hello_engine.py` печатает `HELLO ENGINE OK`. Кнопка «Запустить движок» на экране Sideload показывает эту строку.
 
 Хук Android: `game/**.rpe` явно в пакете `all`. autorun всегда берёт `/storage/emulated/0/Documents/the_question_sideload` и пишет `hook.log`. Пустой путь на экране говорит смотреть `hook.log`. На Android `.rpe` из APK читается в `renpy/main.py`, потому что `os.listdir` папку игры на диске не видит.
+
+Движок Android: ошибка пишется в `last_engine_line`. `hello_engine.py` есть и в `game/`. Запуск тем же интерпретатором, что у Ren'Py.
