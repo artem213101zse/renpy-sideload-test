@@ -33,3 +33,5 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 Качалка BIOS: кнопка «Скачать мод» берёт `tools/sample_mod.zip` с raw GitHub в `Documents/the_question_sideload/incoming/sample_mod.zip`, пишет проценты и сразу ставит zip.
 
 Кнопка BIOS только на Android: через jnius открывает `LauncherActivity` и закрывает `PythonSDLActivity`. Если jnius или класс не найдены, на экране короткое сообщение.
+
+Сейвы: `python early` ставит `config.savedir` в `Documents/the_question_sideload/saves` на Android и в `the_question/sideload/saves` на ПК. BIOS экспортирует и импортирует zip до запуска Python.

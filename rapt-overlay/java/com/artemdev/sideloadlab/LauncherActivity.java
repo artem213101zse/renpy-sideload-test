@@ -31,6 +31,7 @@ import java.util.Enumeration;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 public class LauncherActivity extends Activity {
 
@@ -69,6 +70,18 @@ public class LauncherActivity extends Activity {
             @Override
             public void onClick(View v) {
                 deleteMod();
+            }
+        });
+        findViewById(R.id.bios_export_saves).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                exportSaves();
+            }
+        });
+        findViewById(R.id.bios_import_saves).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                importSaves();
             }
         });
         findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
@@ -543,6 +556,204 @@ public class LauncherActivity extends Activity {
         } catch (IOException e) {
             return false;
         }
+    }
+
+    private File savesDir() {
+        if (sideloadDir == null) {
+            resolvePaths();
+        }
+        return new File(sideloadDir, "saves");
+    }
+
+    private File backupsDir() {
+        if (sideloadDir == null) {
+            resolvePaths();
+        }
+        return new File(sideloadDir, "backups");
+    }
+
+    private void exportSaves() {
+        File saves = savesDir();
+        File backups = backupsDir();
+        if (!saves.isDirectory()) {
+            appendStatus("\nЭкспорт: папки saves нет.");
+            logLine("export saves missing");
+            return;
+        }
+        if (!backups.isDirectory() && !backups.mkdirs()) {
+            appendStatus("\nЭкспорт: не создана папка backups.");
+            logLine("export backups failed");
+            return;
+        }
+        String stamp = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(new Date());
+        File zip = new File(backups, "saves_" + stamp + ".zip");
+        ZipOutputStream zos = null;
+        int count = 0;
+        try {
+            zos = new ZipOutputStream(new FileOutputStream(zip));
+            count = addTreeToZip(zos, saves, "");
+            zos.finish();
+            appendStatus("\nЭкспорт " + zip.getAbsolutePath() + ", файлов: " + count);
+            logLine("export " + zip.getAbsolutePath() + " files " + count);
+        } catch (Exception e) {
+            appendStatus("\nЭкспорт не удался: " + messageOf(e));
+            logLine("export failed " + messageOf(e));
+        } finally {
+            if (zos != null) {
+                try {
+                    zos.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    private int addTreeToZip(ZipOutputStream zos, File dir, String prefix) throws IOException {
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return 0;
+        }
+        int count = 0;
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            if (file == null) {
+                continue;
+            }
+            String name = file.getName();
+            if (name == null || name.indexOf("..") >= 0) {
+                continue;
+            }
+            String entryName = prefix.length() == 0 ? name : prefix + "/" + name;
+            if (file.isDirectory()) {
+                count += addTreeToZip(zos, file, entryName);
+            } else if (file.isFile()) {
+                ZipEntry entry = new ZipEntry(entryName);
+                zos.putNextEntry(entry);
+                copyFileToStream(file, zos);
+                zos.closeEntry();
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private void copyFileToStream(File file, ZipOutputStream zos) throws IOException {
+        InputStream in = null;
+        try {
+            in = new java.io.FileInputStream(file);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) >= 0) {
+                if (n > 0) {
+                    zos.write(buf, 0, n);
+                }
+            }
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+    }
+
+    private void importSaves() {
+        File zip = newestBackupZip();
+        String from = "backups";
+        if (zip == null && incomingDir != null) {
+            File incomingZip = new File(incomingDir, "saves.zip");
+            if (incomingZip.isFile()) {
+                zip = incomingZip;
+                from = "incoming";
+            }
+        }
+        if (zip == null) {
+            appendStatus("\nИмпорт: нет zip в backups и нет incoming/saves.zip.");
+            logLine("import no zip");
+            return;
+        }
+        File saves = savesDir();
+        if (!saves.isDirectory() && !saves.mkdirs()) {
+            appendStatus("\nИмпорт: не создана папка saves.");
+            logLine("import saves mkdir failed");
+            return;
+        }
+        int count = unzipReplace(zip, saves);
+        appendStatus("\nИмпорт " + from + " " + zip.getAbsolutePath() + ", файлов: " + count);
+        logLine("import " + zip.getAbsolutePath() + " files " + count);
+    }
+
+    private File newestBackupZip() {
+        File backups = backupsDir();
+        File[] files = backups.listFiles();
+        if (files == null) {
+            return null;
+        }
+        File best = null;
+        long bestTime = -1L;
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            if (file == null || !file.isFile()) {
+                continue;
+            }
+            String name = file.getName();
+            if (name == null || !name.toLowerCase(Locale.US).endsWith(".zip")) {
+                continue;
+            }
+            long when = file.lastModified();
+            if (best == null || when > bestTime) {
+                best = file;
+                bestTime = when;
+            }
+        }
+        return best;
+    }
+
+    private int unzipReplace(File zip, File destDir) {
+        ZipFile zipFile = null;
+        int count = 0;
+        try {
+            zipFile = new ZipFile(zip);
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                String name = entry.getName();
+                if (forbiddenZipName(name)) {
+                    appendStatus("\nПропущен путь с .. : " + name);
+                    logLine("import reject " + name);
+                    continue;
+                }
+                String relative = name.replace('\\', '/');
+                File out = new File(destDir, relative);
+                if (!staysInside(destDir, out)) {
+                    appendStatus("\nПропущен путь вне saves: " + name);
+                    logLine("import outside " + name);
+                    continue;
+                }
+                if (entry.isDirectory() || relative.endsWith("/")) {
+                    if (!out.isDirectory() && !out.mkdirs()) {
+                        appendStatus("\nНе создан каталог " + relative);
+                    }
+                    continue;
+                }
+                File parent = out.getParentFile();
+                if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
+                    appendStatus("\nНе создан каталог для " + relative);
+                    continue;
+                }
+                copyEntry(zipFile, entry, out);
+                count++;
+            }
+        } catch (Exception e) {
+            appendStatus("\nИмпорт не удался: " + messageOf(e));
+            logLine("import failed " + messageOf(e));
+        } finally {
+            if (zipFile != null) {
+                try {
+                    zipFile.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+        return count;
     }
 
     private void deleteMod() {

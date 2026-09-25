@@ -91,6 +91,28 @@
         android:textStyle="bold" />
 
     <Button
+        android:id="@+id/bios_export_saves"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/sideload_button"
+        android:text="Экспорт сейвов"
+        android:textAllCaps="false"
+        android:textColor="#1a1420"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/bios_import_saves"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/sideload_button"
+        android:text="Импорт сейвов"
+        android:textAllCaps="false"
+        android:textColor="#1a1420"
+        android:textStyle="bold" />
+
+    <Button
         android:id="@+id/bios_start"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
