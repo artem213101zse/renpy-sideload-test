@@ -1,7 +1,8 @@
-# Зачем этот файл: запускает hello_engine.py из «The Question».
-# На ПК — python из lib этого Ren'Py. На Android subprocess python не зовём:
-# своего бинаря нет, sys.executable даёт Errno 2.
-# Ошибка пишется в store.last_engine_line, игра не падает.
+# Зачем этот файл: запускает заглушку движка из «The Question».
+# На ПК — hello_engine.py через python из lib этого Ren'Py.
+# На Android sys.executable не вызывается. Сначала files/hello_engine
+# в private dir, если он исполняемый. Иначе /system/bin/sh echo.
+# Ошибка пишется в store.last_engine_line без квадратных скобок.
 # Python 2.7, subprocess.Popen, таймаут 3 секунды.
 
 default last_engine_line = ""
@@ -43,20 +44,79 @@ init python:
         except Exception:
             return False
 
-    def _native_binary():
-        # Нативный файл движка, не hello_engine.py и не sys.executable.
-        candidates = (
-            "/storage/emulated/0/Documents/the_question_sideload/hello_engine",
-            os.path.join(renpy.config.gamedir, "hello_engine"),
-            os.path.join(renpy.config.basedir, "tools", "hello_engine"),
-        )
-        for path in candidates:
-            try:
-                if path and os.path.isfile(path):
-                    return path
-            except Exception:
-                continue
+    def _plain(data):
+        text = _engine_text(data)
+        return text.replace(u"[", u"(").replace(u"]", u")")
+
+    def _private_engine():
+        # getFilesDir()/hello_engine. Не Documents.
+        private = os.environ.get("ANDROID_PRIVATE")
+        if not private:
+            return None
+        path = os.path.join(private, "hello_engine")
+        try:
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                return path
+        except Exception:
+            return None
         return None
+
+    def _finish_process(proc):
+        timed_out = False
+        deadline = time.time() + 3
+        while proc.poll() is None:
+            if time.time() >= deadline:
+                timed_out = True
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                break
+            time.sleep(0.05)
+        try:
+            out, err = proc.communicate()
+        except Exception:
+            return None, _plain(traceback.format_exc())
+        text = _plain(out).replace(u"\r", u"")
+        line = u""
+        for part in text.split(u"\n"):
+            part = part.strip()
+            if part:
+                line = part
+                break
+        if line:
+            return line, None
+        if timed_out:
+            return u"таймаут 3 сек", None
+        err_text = _plain(err).strip()
+        if err_text:
+            return None, err_text
+        return None, u"движок ничего не напечатал, код %s" % proc.returncode
+
+    def _run_android_native():
+        # sys.executable на Android не вызываем.
+        if subprocess is None:
+            store.last_engine_line = u"нет subprocess"
+            return
+        binary = _private_engine()
+        if binary:
+            cmd = [binary]
+        else:
+            cmd = ["/system/bin/sh", "-c", "echo HELLO ENGINE OK"]
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                )
+        except Exception:
+            store.last_engine_line = _plain(traceback.format_exc())
+            return
+        line, err = _finish_process(proc)
+        if line:
+            store.last_engine_line = line
+        else:
+            store.last_engine_line = err or u"движок ничего не напечатал"
 
     def _engine_python():
         # Только ПК. На Android sys.executable — само приложение, его не вызываем.
@@ -124,12 +184,7 @@ init python:
 
     def _run_hello_engine():
         if _on_android():
-            # sys.executable здесь — само приложение. Без нативного бинаря
-            # Popen не вызываем, в тексте нет квадратных скобок.
-            if not _native_binary():
-                store.last_engine_line = u"на Android нужен нативный бинарь, не python subprocess"
-                return
-            store.last_engine_line = u"на Android нужен нативный бинарь, не python subprocess"
+            _run_android_native()
             return
 
         if subprocess is None:
@@ -163,47 +218,17 @@ init python:
                 startupinfo=startupinfo,
                 )
         except Exception:
-            store.last_engine_line = u"нет subprocess\n" + _engine_text(traceback.format_exc())
+            store.last_engine_line = _plain(u"нет subprocess\n" + _engine_text(traceback.format_exc()))
             return
 
-        deadline = time.time() + 3
-        while proc.poll() is None:
-            if time.time() >= deadline:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
-                store.last_engine_line = u"таймаут 3 сек"
-                break
-            time.sleep(0.05)
-
-        try:
-            out, err = proc.communicate()
-        except Exception:
-            store.last_engine_line = u"нет subprocess\n" + _engine_text(traceback.format_exc())
-            return
-
-        text = _engine_text(out).replace(u"\r", u"")
-        line = u""
-        for part in text.split(u"\n"):
-            part = part.strip()
-            if part:
-                line = part
-                break
+        line, err = _finish_process(proc)
         if line:
             store.last_engine_line = line
             return
-
-        err_text = _engine_text(err).strip()
-        if err_text:
-            store.last_engine_line = err_text
-            return
-        if store.last_engine_line == u"таймаут 3 сек":
-            return
-        store.last_engine_line = u"движок ничего не напечатал, код %s" % proc.returncode
+        store.last_engine_line = err or u"движок ничего не напечатал"
 
     def run_hello_engine():
         try:
             _run_hello_engine()
         except Exception:
-            store.last_engine_line = _engine_text(traceback.format_exc())
+            store.last_engine_line = _plain(traceback.format_exc())

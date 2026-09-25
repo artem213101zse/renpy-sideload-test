@@ -87,6 +87,7 @@ public class LauncherActivity extends Activity {
         setContentView(root);
 
         resolvePaths();
+        installNativeEngine();
         if (needsRuntimePermission()) {
             setStatus("Запрашиваю доступ к памяти.\n" + pathReport());
             requestPermissions(new String[] {
@@ -119,6 +120,103 @@ public class LauncherActivity extends Activity {
             return;
         }
         prepareFolders();
+    }
+
+    private void installNativeEngine() {
+        // Только getFilesDir()/hello_engine. В Documents бинарь не кладём.
+        String abiName = nativeEngineAssetName();
+        if (abiName == null) {
+            appendStatus("\nНативный движок: ABI не arm64-v8a и не x86_64. Останется /system/bin/sh.");
+            return;
+        }
+        File dest = new File(getFilesDir(), "hello_engine");
+        InputStream in = null;
+        FileOutputStream out = null;
+        try {
+            in = openEngineStream(abiName);
+            if (in == null) {
+                appendStatus("\nНативный движок: " + abiName + " нет в assets. Останется /system/bin/sh.");
+                return;
+            }
+            out = new FileOutputStream(dest);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) >= 0) {
+                if (n > 0) {
+                    out.write(buf, 0, n);
+                }
+            }
+            out.flush();
+            chmod755(dest);
+            appendStatus("\nНативный движок: " + dest.getAbsolutePath());
+            logLine("copied " + abiName + " to " + dest.getAbsolutePath());
+        } catch (Exception e) {
+            appendStatus("\nНе удалось скопировать hello_engine: " + messageOf(e));
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignored) {
+                }
+            }
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    private String nativeEngineAssetName() {
+        String abi = "";
+        if (Build.VERSION.SDK_INT >= 21) {
+            String[] abis = Build.SUPPORTED_ABIS;
+            if (abis != null && abis.length > 0 && abis[0] != null) {
+                abi = abis[0];
+            }
+        } else {
+            abi = Build.CPU_ABI == null ? "" : Build.CPU_ABI;
+        }
+        abi = abi.toLowerCase(Locale.US);
+        if (abi.startsWith("arm64")) {
+            return "hello_engine-arm64";
+        }
+        if (abi.startsWith("x86_64")) {
+            return "hello_engine-x86_64";
+        }
+        return null;
+    }
+
+    private InputStream openEngineStream(String name) {
+        String[] assets = new String[] {
+                name,
+                "bin/" + name,
+                "x-" + name,
+                "x-bin/x-" + name,
+                "x-rapt-overlay/x-bin/x-" + name
+        };
+        for (int i = 0; i < assets.length; i++) {
+            try {
+                return getAssets().open(assets[i]);
+            } catch (IOException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private void chmod755(File dest) {
+        dest.setReadable(true, false);
+        dest.setWritable(true, true);
+        dest.setExecutable(true, false);
+        try {
+            Process chmod = Runtime.getRuntime().exec(new String[] {
+                    "chmod", "755", dest.getAbsolutePath()
+            });
+            chmod.waitFor();
+        } catch (Exception e) {
+            appendStatus("\nchmod 755: " + messageOf(e));
+        }
     }
 
     private void resolvePaths() {
