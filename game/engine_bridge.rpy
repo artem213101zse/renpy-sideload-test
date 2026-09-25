@@ -1,6 +1,6 @@
 # Зачем этот файл: запускает hello_engine.py из «The Question».
-# Ищет скрипт в Documents/the_question_sideload, затем в game/, затем в tools/.
-# Интерпретатор — тот же, что у этого Ren'Py, не системный python.
+# На ПК — python из lib этого Ren'Py. На Android subprocess python не зовём:
+# своего бинаря нет, sys.executable даёт Errno 2.
 # Ошибка пишется в store.last_engine_line, игра не падает.
 # Python 2.7, subprocess.Popen, таймаут 3 секунды.
 
@@ -43,13 +43,24 @@ init python:
         except Exception:
             return False
 
+    def _native_binary():
+        # Нативный файл движка, не hello_engine.py и не sys.executable.
+        candidates = (
+            "/storage/emulated/0/Documents/the_question_sideload/hello_engine",
+            os.path.join(renpy.config.gamedir, "hello_engine"),
+            os.path.join(renpy.config.basedir, "tools", "hello_engine"),
+        )
+        for path in candidates:
+            try:
+                if path and os.path.isfile(path):
+                    return path
+            except Exception:
+                continue
+        return None
+
     def _engine_python():
-        # На Android это процесс самого Ren'Py. На ПК — python из lib этого SDK,
-        # а не python из PATH.
+        # Только ПК. На Android sys.executable — само приложение, его не вызываем.
         if _on_android():
-            exe = getattr(sys, "executable", None) or u""
-            if exe:
-                return exe
             return None
 
         base = renpy.config.renpy_base or ""
@@ -112,6 +123,15 @@ init python:
         return None, u"нет файла hello_engine.py"
 
     def _run_hello_engine():
+        if _on_android():
+            # sys.executable здесь — само приложение. Без нативного бинаря
+            # Popen не вызываем, в тексте нет квадратных скобок.
+            if not _native_binary():
+                store.last_engine_line = u"на Android нужен нативный бинарь, не python subprocess"
+                return
+            store.last_engine_line = u"на Android нужен нативный бинарь, не python subprocess"
+            return
+
         if subprocess is None:
             store.last_engine_line = u"нет subprocess"
             return
