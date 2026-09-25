@@ -98,6 +98,12 @@ screen sideload_status():
             if sideload_remove_note:
                 text sideload_remove_note substitute False
 
+            if renpy.android:
+                textbutton _("Уведомление сейчас") action Function(sideload_notify_now)
+                textbutton _("Через 30 сек") action Function(sideload_notify_later)
+                if notify_note:
+                    text notify_note substitute False
+
             textbutton _("Запустить движок") action Function(run_hello_engine)
             text last_engine_line substitute False
 

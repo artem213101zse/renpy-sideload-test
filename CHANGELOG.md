@@ -35,3 +35,5 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 Кнопка BIOS только на Android: через jnius открывает `LauncherActivity` и закрывает `PythonSDLActivity`. Если jnius или класс не найдены, на экране короткое сообщение.
 
 Сейвы: `python early` ставит `config.savedir` в `Documents/the_question_sideload/saves` на Android и в `the_question/sideload/saves` на ПК. BIOS экспортирует и импортирует zip до запуска Python.
+
+Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.

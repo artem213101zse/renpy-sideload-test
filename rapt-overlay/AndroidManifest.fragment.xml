@@ -30,6 +30,11 @@
     android:screenOrientation="sensorLandscape">
 </activity>
 
+<!-- Будильник в процессе лаунчера, не в :game. POST_NOTIFICATIONS не нужен: targetSdk 30. -->
+<receiver
+    android:name="com.artemdev.sideloadlab.SideloadAlarmReceiver"
+    android:exported="false" />
+
 <!-- WRITE_EXTERNAL_STORAGE уже был. Добавлены READ и MANAGE. -->
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
