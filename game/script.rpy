@@ -10,6 +10,10 @@ default book = False
 # The game starts here.
 label start:
 
+    # Sideload submod. The label exists only after the hook loads it.
+    if renpy.has_label("extra_inject"):
+        call extra_inject
+
     # Start by playing some music.
     play music "illurock.opus"
 
