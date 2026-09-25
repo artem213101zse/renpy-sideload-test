@@ -19,9 +19,10 @@
 
 </activity>
 
-<!-- PythonSDLActivity остаётся в манифесте, но без MAIN и без LAUNCHER. -->
+<!-- Игра в отдельном процессе. LauncherActivity остаётся в процессе по умолчанию. -->
 <activity
     android:name="org.renpy.android.PythonSDLActivity"
+    android:process=":game"
     android:label="@string/iconName"
     android:alwaysRetainTaskState="true"
     android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"

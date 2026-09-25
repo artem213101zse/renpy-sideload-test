@@ -1,5 +1,6 @@
 # Зачем этот файл: на Android возвращает из игры в Sideload BIOS.
-# PythonSDLActivity закрывается, чтобы следующий запуск заново прочитал .rpy.
+# Игра живёт в процессе :game. Кнопка открывает LauncherActivity в обычном
+# процессе и убивает процесс игры, чтобы SDL не держал UI.
 # На ПК кнопки нет. Если jnius или класс лаунчера недоступны — короткая строка,
 # не traceback.
 
@@ -26,7 +27,13 @@ init python:
                 store.bios_open_note = u"BIOS не открылся: нет PythonSDLActivity."
                 return
             intent = Intent(activity, Launcher)
+            intent.setFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
             activity.startActivity(intent)
-            activity.finish()
+            Process = autoclass("android.os.Process")
+            Process.killProcess(Process.myPid())
         except Exception:
             store.bios_open_note = u"BIOS не открылся: класс лаунчера не найден."
