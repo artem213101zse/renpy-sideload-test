@@ -67,6 +67,15 @@ public class LauncherActivity extends Activity {
             }
         });
 
+        Button remove = new Button(this);
+        remove.setText("Удалить мод");
+        remove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                deleteMod();
+            }
+        });
+
         Button start = new Button(this);
         start.setText("Запустить игру");
         start.setOnClickListener(new View.OnClickListener() {
@@ -79,6 +88,9 @@ public class LauncherActivity extends Activity {
         root.addView(scroll, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         root.addView(install, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        root.addView(remove, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
         root.addView(start, new LinearLayout.LayoutParams(
@@ -418,6 +430,45 @@ public class LauncherActivity extends Activity {
         } catch (IOException e) {
             return false;
         }
+    }
+
+    private void deleteMod() {
+        if (sideloadDir == null) {
+            resolvePaths();
+        }
+        String[] names = new String[] {
+                "extra_hello.rpy",
+                "extra_hello.png",
+                "extra_hello.rpyc"
+        };
+        StringBuilder report = new StringBuilder();
+        report.append("\nУдаление мода:");
+        for (int i = 0; i < names.length; i++) {
+            File file = new File(sideloadDir, names[i]);
+            try {
+                if (!file.exists()) {
+                    report.append("\nнет ").append(names[i]);
+                    logLine("delete missing " + names[i]);
+                    continue;
+                }
+                if (file.isDirectory()) {
+                    report.append("\nпропуск каталога ").append(names[i]);
+                    logLine("delete skip dir " + names[i]);
+                    continue;
+                }
+                if (file.delete()) {
+                    report.append("\nудалён ").append(names[i]);
+                    logLine("deleted " + file.getAbsolutePath());
+                } else {
+                    report.append("\nне удалился ").append(names[i]);
+                    logLine("delete failed " + file.getAbsolutePath());
+                }
+            } catch (SecurityException e) {
+                report.append("\nнет права на ").append(names[i]);
+                logLine("delete denied " + names[i] + " " + messageOf(e));
+            }
+        }
+        appendStatus(report.toString());
     }
 
     private void startGame() {

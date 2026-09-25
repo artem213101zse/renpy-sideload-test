@@ -23,3 +23,5 @@
 Нативный процесс: на Android сначала `files/hello_engine` в private dir, иначе `/system/bin/sh -c echo HELLO ENGINE OK`. Исходник `tools/hello_engine.c`, сборка NDK в `README_SIDELOAD.md`. Java копирует ABI в `getFilesDir()/hello_engine` и ставит `chmod 755`, не в Documents.
 
 Сабмод: `extra_hello.rpy` ставит `store.extra_mod_active` и метку `extra_inject`. `label start` её не заменяет: в начале истории `call extra_inject`, если метка уже есть, затем обычный сюжет.
+
+Удаление мода: стираются только `extra_hello.rpy`, `.png` и `.rpyc` в `Documents/the_question_sideload`. `incoming` и остальная папка не трогаются. Метка `extra_inject` остаётся до перезапуска.

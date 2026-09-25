@@ -88,6 +88,11 @@ screen sideload_status():
             else:
                 text _("Мод ещё не загружен. Распакуйте zip в папку sideload и перезапустите игру.")
 
+            textbutton _("Удалить мод") action Function(sideload_remove_mod)
+            text "Пока процесс жив, метка extra_inject останется. Она снимется после перезапуска."
+            if sideload_remove_note:
+                text sideload_remove_note substitute False
+
             textbutton _("Запустить движок") action Function(run_hello_engine)
             text last_engine_line substitute False
 
