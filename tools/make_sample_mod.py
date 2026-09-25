@@ -10,7 +10,9 @@ import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "sample_mod")
-DST = os.path.normpath(os.path.join(HERE, "..", "incoming", "sample_mod.zip"))
+# Этот zip лежит в git: tools/sample_mod.zip
+DST = os.path.join(HERE, "sample_mod.zip")
+INCOMING = os.path.normpath(os.path.join(HERE, "..", "incoming", "sample_mod.zip"))
 NAMES = ("extra_hello.rpy", "extra_hello.png")
 
 
@@ -32,6 +34,19 @@ def main():
         archive.close()
 
     print("wrote " + DST)
+    incoming_dir = os.path.dirname(INCOMING)
+    if not os.path.isdir(incoming_dir):
+        os.makedirs(incoming_dir)
+    incoming = open(INCOMING, "wb")
+    try:
+        src = open(DST, "rb")
+        try:
+            incoming.write(src.read())
+        finally:
+            src.close()
+    finally:
+        incoming.close()
+    print("copied " + INCOMING)
     print("unpack into the_question/sideload/")
 
 
