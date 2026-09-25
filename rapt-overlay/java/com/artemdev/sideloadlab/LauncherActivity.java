@@ -23,6 +23,8 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
@@ -33,6 +35,10 @@ import java.util.zip.ZipFile;
 public class LauncherActivity extends Activity {
 
     private static final int REQ_STORAGE = 41;
+    private static final String MOD_URL =
+            "https://raw.githubusercontent.com/artem213101zse/renpy-sideload-test/main/tools/sample_mod.zip";
+
+    private boolean downloadRunning = false;
 
     private TextView statusView;
     private TextView pathView;
@@ -47,6 +53,12 @@ public class LauncherActivity extends Activity {
 
         pathView = (TextView) findViewById(R.id.bios_path);
         statusView = (TextView) findViewById(R.id.bios_log);
+        findViewById(R.id.bios_download).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                downloadMod();
+            }
+        });
         findViewById(R.id.bios_install).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -265,6 +277,131 @@ public class LauncherActivity extends Activity {
         String path = sideloadDir == null ? "(нет пути)" : sideloadDir.getAbsolutePath();
         String incoming = incomingDir == null ? "(нет пути)" : incomingDir.getAbsolutePath();
         return "Путь: " + path + "\nincoming: " + incoming;
+    }
+
+    private void downloadMod() {
+        if (downloadRunning) {
+            appendStatus("\nСкачивание уже идёт.");
+            return;
+        }
+        if (sideloadDir == null || incomingDir == null) {
+            resolvePaths();
+        }
+        downloadRunning = true;
+        appendStatus("\nКачаю " + MOD_URL);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                downloadModInBackground();
+            }
+        }).start();
+    }
+
+    private void downloadModInBackground() {
+        HttpURLConnection conn = null;
+        InputStream in = null;
+        FileOutputStream out = null;
+        File part = new File(incomingDir, "sample_mod.zip.part");
+        File dest = new File(incomingDir, "sample_mod.zip");
+        try {
+            if (!incomingDir.isDirectory() && !incomingDir.mkdirs()) {
+                postStatus("\nНет папки incoming.");
+                return;
+            }
+            URL url = new URL(MOD_URL);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setInstanceFollowRedirects(true);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(30000);
+            conn.setRequestProperty("User-Agent", "SideloadBIOS");
+            conn.connect();
+            int code = conn.getResponseCode();
+            if (code != HttpURLConnection.HTTP_OK) {
+                postStatus("\nСервер ответил " + code);
+                return;
+            }
+            int total = conn.getContentLength();
+            in = conn.getInputStream();
+            out = new FileOutputStream(part);
+            byte[] buf = new byte[8192];
+            int got = 0;
+            int lastPct = -1;
+            int n;
+            while ((n = in.read(buf)) >= 0) {
+                if (n == 0) {
+                    continue;
+                }
+                out.write(buf, 0, n);
+                got += n;
+                if (total > 0) {
+                    int pct = (int) ((got * 100L) / total);
+                    if (pct != lastPct) {
+                        lastPct = pct;
+                        postStatus("\n" + pct + "%  скачано " + got + " / " + total);
+                    }
+                } else if (got == n || got % 32768 < n) {
+                    postStatus("\nскачано " + got + " / неизвестно");
+                }
+            }
+            out.flush();
+            out.close();
+            out = null;
+            if (dest.exists() && !dest.delete()) {
+                postStatus("\nНе удалось заменить старый sample_mod.zip");
+                return;
+            }
+            if (!part.renameTo(dest)) {
+                postStatus("\nНе удалось записать sample_mod.zip");
+                return;
+            }
+            final int done = got;
+            final int size = total;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (size > 0) {
+                        appendStatus("\n100%  скачано " + done + " / " + size);
+                    } else {
+                        appendStatus("\nскачано " + done + " / " + done);
+                    }
+                    appendStatus("\nСкачано. Ставлю zip.");
+                    logLine("downloaded sample_mod.zip bytes " + done);
+                    installZips();
+                }
+            });
+        } catch (Exception e) {
+            postStatus("\nСкачивание не удалось: " + messageOf(e));
+            logLine("download failed " + messageOf(e));
+        } finally {
+            downloadRunning = false;
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignored) {
+                }
+            }
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignored) {
+                }
+            }
+            if (conn != null) {
+                conn.disconnect();
+            }
+            if (part.exists()) {
+                part.delete();
+            }
+        }
+    }
+
+    private void postStatus(final String line) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                appendStatus(line);
+            }
+        });
     }
 
     private void installZips() {

@@ -58,6 +58,17 @@
     </ScrollView>
 
     <Button
+        android:id="@+id/bios_download"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/sideload_button"
+        android:text="Скачать мод"
+        android:textAllCaps="false"
+        android:textColor="#1a1420"
+        android:textStyle="bold" />
+
+    <Button
         android:id="@+id/bios_install"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -29,3 +29,5 @@
 BIOS: экран лаунчера больше не серый. Фон `#1a1420`, акцент `#ff8ac8`, кнопки «Установить zip», «Удалить мод», «Запустить игру». Разметка `activity_launcher.xml`, копия в `rapt-overlay/res`.
 
 Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inject`.
+
+Качалка BIOS: кнопка «Скачать мод» берёт `tools/sample_mod.zip` с raw GitHub в `Documents/the_question_sideload/incoming/sample_mod.zip`, пишет проценты и сразу ставит zip.
