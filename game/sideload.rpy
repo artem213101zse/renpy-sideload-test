@@ -80,6 +80,11 @@ screen sideload_status():
             else:
                 text _("Nothing here yet. Drop a .rpy or an image into the folder and restart.")
 
+            if renpy.has_label("extra_hello"):
+                textbutton _("Открыть мод") action Start("extra_hello")
+            else:
+                text _("Мод ещё не загружен. Распакуйте zip в папку sideload и перезапустите игру.")
+
 
 translate russian strings:
 

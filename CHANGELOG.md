@@ -9,3 +9,5 @@
 Исходник хука: `sideload_src/autorun.py`. Сборка: `python sideload_src/build_sideload_rpe.py`.
 
 Экран Sideload: путь пишется в переменную экрана, потому что в Ren'Py 7.4 внутри `text` нельзя вызывать функцию.
+
+Учебный мод: `tools/make_sample_mod.py` собирает `incoming/sample_mod.zip`. Zip распаковывается прямо в `sideload/`. Кнопка «Открыть мод» появляется после перезапуска, когда label `extra_hello` уже загружен.
