@@ -13,3 +13,5 @@
 Учебный мод: `tools/make_sample_mod.py` собирает `incoming/sample_mod.zip`. Zip распаковывается прямо в `sideload/`. Кнопка «Открыть мод» появляется после перезапуска, когда label `extra_hello` уже загружен.
 
 Заглушка движка: `tools/hello_engine.py` печатает `HELLO ENGINE OK`. Кнопка «Запустить движок» на экране Sideload показывает эту строку.
+
+Хук Android: `game/**.rpe` явно в пакете `all`. autorun всегда берёт `/storage/emulated/0/Documents/the_question_sideload` и пишет `hook.log`. Пустой путь на экране говорит смотреть `hook.log`. На Android `.rpe` из APK читается в `renpy/main.py`, потому что `os.listdir` папку игры на диске не видит.

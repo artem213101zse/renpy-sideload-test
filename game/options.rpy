@@ -187,6 +187,10 @@ init python:
     build.classify('**/#**', None)
     build.classify('**/thumbs.db', None)
 
+    ## .rpe is the early sideload hook. It must be inside the Android
+    ## package. "all" is the 7.4.11 file list used by the android build.
+    build.classify('game/**.rpe', 'all')
+
     ## To archive files, classify them as 'archive'.
 
     # build.classify('game/**.png', 'archive')

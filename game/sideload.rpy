@@ -68,6 +68,9 @@ screen sideload_status():
 
             text _("Path: [sideload_path_text]")
 
+            if not sideload_path_text:
+                text _("смотри hook.log")
+
             if sideload_is_ready():
                 text _("This folder is on config.searchpath.")
             else:
