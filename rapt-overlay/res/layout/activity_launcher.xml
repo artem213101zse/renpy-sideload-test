@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Зачем: тёмный экран Sideload BIOS до запуска Ren'Py. Без чужих картинок. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1a1420"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sideload BIOS"
+        android:textColor="#ff8ac8"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Путь"
+        android:textColor="#7ee0d6"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/bios_path"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#f4e9f2"
+        android:textSize="14sp"
+        android:typeface="monospace" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="Лог"
+        android:textColor="#7ee0d6"
+        android:textSize="12sp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="4dp"
+        android:layout_weight="1"
+        android:background="#120e18"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/bios_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#f4e9f2"
+            android:textSize="13sp"
+            android:typeface="monospace" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/bios_install"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/sideload_button"
+        android:text="Установить zip"
+        android:textAllCaps="false"
+        android:textColor="#1a1420"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/bios_delete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/sideload_button"
+        android:text="Удалить мод"
+        android:textAllCaps="false"
+        android:textColor="#1a1420"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/bios_start"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/sideload_button_start"
+        android:text="Запустить игру"
+        android:textAllCaps="false"
+        android:textColor="#1a1420"
+        android:textStyle="bold" />
+
+</LinearLayout>

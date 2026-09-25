@@ -25,3 +25,5 @@
 Сабмод: `extra_hello.rpy` ставит `store.extra_mod_active` и метку `extra_inject`. `label start` её не заменяет: в начале истории `call extra_inject`, если метка уже есть, затем обычный сюжет.
 
 Удаление мода: стираются только `extra_hello.rpy`, `.png` и `.rpyc` в `Documents/the_question_sideload`. `incoming` и остальная папка не трогаются. Метка `extra_inject` остаётся до перезапуска.
+
+BIOS: экран лаунчера больше не серый. Фон `#1a1420`, акцент `#ff8ac8`, кнопки «Установить zip», «Удалить мод», «Запустить игру». Разметка `activity_launcher.xml`, копия в `rapt-overlay/res`.

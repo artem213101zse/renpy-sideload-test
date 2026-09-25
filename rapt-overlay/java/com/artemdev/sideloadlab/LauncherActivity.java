@@ -7,19 +7,16 @@ package com.artemdev.sideloadlab;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.view.View;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.renpy.android.PythonSDLActivity;
+import org.renpy.android.R;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,6 +35,7 @@ public class LauncherActivity extends Activity {
     private static final int REQ_STORAGE = 41;
 
     private TextView statusView;
+    private TextView pathView;
     private File sideloadDir;
     private File incomingDir;
     private File logFile;
@@ -45,58 +43,28 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_launcher);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.WHITE);
-        root.setPadding(32, 32, 32, 32);
-
-        statusView = new TextView(this);
-        statusView.setTextColor(Color.BLACK);
-        statusView.setTextSize(16);
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.addView(statusView);
-
-        Button install = new Button(this);
-        install.setText("Установить zip из incoming");
-        install.setOnClickListener(new View.OnClickListener() {
+        pathView = (TextView) findViewById(R.id.bios_path);
+        statusView = (TextView) findViewById(R.id.bios_log);
+        findViewById(R.id.bios_install).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 installZips();
             }
         });
-
-        Button remove = new Button(this);
-        remove.setText("Удалить мод");
-        remove.setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.bios_delete).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 deleteMod();
             }
         });
-
-        Button start = new Button(this);
-        start.setText("Запустить игру");
-        start.setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startGame();
             }
         });
-
-        root.addView(scroll, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
-        root.addView(install, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        root.addView(remove, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        root.addView(start, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        setContentView(root);
 
         resolvePaths();
         installNativeEngine();
@@ -128,6 +96,7 @@ public class LauncherActivity extends Activity {
             }
         }
         if (!granted) {
+            showPath();
             setStatus("Нет права на память. Папки не созданы.\n" + pathReport());
             return;
         }
@@ -260,7 +229,14 @@ public class LauncherActivity extends Activity {
         }
     }
 
+    private void showPath() {
+        if (pathView != null) {
+            pathView.setText(pathReport());
+        }
+    }
+
     private void prepareFolders() {
+        showPath();
         StringBuilder report = new StringBuilder();
         report.append(pathReport());
         if (Build.VERSION.SDK_INT >= 30 && !allFilesAccess()) {

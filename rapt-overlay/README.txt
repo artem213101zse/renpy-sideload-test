@@ -30,6 +30,17 @@
 Zip из incoming распаковывается прямо в the_question_sideload,
 как sample_mod.zip на ПК распаковывается в the_question/sideload/.
 
+3. Тёмный BIOS
+   rapt-overlay/res/layout/activity_launcher.xml
+   rapt-overlay/res/drawable/sideload_button.xml
+   rapt-overlay/res/drawable/sideload_button_start.xml
+   rapt-overlay/res/values/sideload_bios.xml
+   Куда:
+   rapt/project/renpyandroid/src/main/res/layout/activity_launcher.xml
+   rapt/project/renpyandroid/src/main/res/drawable/
+   rapt/project/renpyandroid/src/main/res/values/sideload_bios.xml
+   У activity лаунчера в манифесте стоит android:theme="@style/SideloadBiosTheme".
+
 Если RAPT собирает проект с update_always, шаблон
 rapt/templates/app-AndroidManifest.xml снова затирает манифест.
 Тогда фрагмент нужно вставить ещё раз. Сам Java-класс шаблон не затирает.
