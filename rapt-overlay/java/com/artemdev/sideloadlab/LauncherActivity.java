@@ -1,6 +1,8 @@
 // Зачем этот класс: экран до Ren'Py. Создаёт Documents/the_question_sideload
 // (тот же путь, который sideload.rpe ищет на Android), распаковывает zip
 // из incoming прямо в эту папку и только потом открывает PythonSDLActivity.
+// HTML BIOS не открывается с android_asset: байты кладутся в
+// getFilesDir()/bios_www, WebView грузит file:// этого index.html.
 
 package com.artemdev.sideloadlab;
 
@@ -82,6 +84,8 @@ public class LauncherActivity extends Activity {
     private File sideloadDir;
     private File incomingDir;
     private File logFile;
+    private String biosByteSource = "none";
+    private boolean biosPrepareAttempted = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,7 +100,8 @@ public class LauncherActivity extends Activity {
         if (flagExists("ui_native")) {
             showNativeBios();
         } else if (!tryShowWebBios()) {
-            showWebFailed("нет WebView", "file:///android_asset/www/index.html");
+            File missing = new File(new File(getFilesDir(), "bios_www"), "index.html");
+            showWebFailed("exists=false", missing.getAbsolutePath());
         }
 
         installNativeEngine();
@@ -308,6 +313,9 @@ public class LauncherActivity extends Activity {
             }
             report.append("\nПапки: созданы.");
             logLine("folders ready");
+            if (biosPrepareAttempted) {
+                logBiosFiles();
+            }
             report.append("\nЛог: ").append(logFile.getAbsolutePath());
         } catch (SecurityException e) {
             report.append("\nНет права создать папки: ").append(messageOf(e));
@@ -1845,12 +1853,148 @@ public class LauncherActivity extends Activity {
         }
     }
 
+    private static final String[] BIOS_PAGE_NAMES = new String[] {
+            "index.html", "styles.css", "app.js"
+    };
+
+    private File prepareBiosWww() {
+        biosPrepareAttempted = true;
+        File dir = new File(getFilesDir(), "bios_www");
+        if (!dir.isDirectory() && !dir.mkdirs()) {
+            logLine("bios www mkdir failed " + dir.getAbsolutePath());
+        }
+        // Игровые assets с префиксом x- не читаем: Ren'Py так пакует game/.
+        if (copyAssetWww(dir)) {
+            biosByteSource = "android_asset/www";
+        } else if (copySideloadWww(dir)) {
+            biosByteSource = "Documents/the_question_sideload/bios_www";
+        } else if (copyRawWww(dir)) {
+            biosByteSource = "R.raw bios_index.html bios_styles.css bios_app.js";
+        } else {
+            biosByteSource = "none";
+        }
+        logBiosFiles();
+        return new File(dir, "index.html");
+    }
+
+    private void logBiosFiles() {
+        File dir = new File(getFilesDir(), "bios_www");
+        for (int i = 0; i < BIOS_PAGE_NAMES.length; i++) {
+            File file = new File(dir, BIOS_PAGE_NAMES[i]);
+            logLine("bios file " + file.getAbsolutePath()
+                    + " exists=" + file.isFile()
+                    + " source=" + biosByteSource);
+        }
+    }
+
+    private boolean copyAssetWww(File dir) {
+        for (int i = 0; i < BIOS_PAGE_NAMES.length; i++) {
+            InputStream in = null;
+            try {
+                in = getAssets().open("www/" + BIOS_PAGE_NAMES[i]);
+            } catch (IOException e) {
+                closeQuietly(in);
+                return false;
+            }
+            if (!writeStream(in, new File(dir, BIOS_PAGE_NAMES[i]))) {
+                return false;
+            }
+        }
+        return new File(dir, "index.html").isFile();
+    }
+
+    private boolean copySideloadWww(File dir) {
+        if (sideloadDir == null) {
+            return false;
+        }
+        File src = new File(sideloadDir, "bios_www");
+        if (!new File(src, "index.html").isFile()) {
+            return false;
+        }
+        try {
+            for (int i = 0; i < BIOS_PAGE_NAMES.length; i++) {
+                File from = new File(src, BIOS_PAGE_NAMES[i]);
+                if (!from.isFile()) {
+                    return false;
+                }
+                FileInputStream in = new FileInputStream(from);
+                if (!writeStream(in, new File(dir, BIOS_PAGE_NAMES[i]))) {
+                    return false;
+                }
+            }
+        } catch (IOException e) {
+            return false;
+        }
+        return new File(dir, "index.html").isFile();
+    }
+
+    private boolean copyRawWww(File dir) {
+        int[] ids = new int[] { R.raw.bios_index, R.raw.bios_styles, R.raw.bios_app };
+        try {
+            for (int i = 0; i < ids.length; i++) {
+                InputStream in = getResources().openRawResource(ids[i]);
+                if (!writeStream(in, new File(dir, BIOS_PAGE_NAMES[i]))) {
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            logLine("bios raw failed " + messageOf(e));
+            return false;
+        }
+        return new File(dir, "index.html").isFile();
+    }
+
+    private boolean writeStream(InputStream in, File dest) {
+        FileOutputStream out = null;
+        try {
+            if (in == null) {
+                return false;
+            }
+            out = new FileOutputStream(dest);
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) >= 0) {
+                if (n > 0) {
+                    out.write(buf, 0, n);
+                }
+            }
+            out.flush();
+            return dest.isFile();
+        } catch (IOException e) {
+            return false;
+        } finally {
+            closeQuietly(in);
+            closeQuietly(out);
+        }
+    }
+
+    private void closeQuietly(java.io.Closeable stream) {
+        if (stream == null) {
+            return;
+        }
+        try {
+            stream.close();
+        } catch (IOException ignored) {
+        }
+    }
+
     private boolean tryShowWebBios() {
+        File index = prepareBiosWww();
+        boolean exists = index != null && index.isFile();
+        String path = index == null ? "(нет пути)" : index.getAbsolutePath();
+        logLine("bios html " + path + " exists=" + exists);
+        if (!exists) {
+            return false;
+        }
+        String pageUrl = Uri.fromFile(index).toString();
+        logLine("bios load " + pageUrl);
         try {
             WebView web = new WebView(this);
             WebSettings settings = web.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setAllowFileAccess(true);
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setAllowUniversalAccessFromFileURLs(true);
             settings.setDomStorageEnabled(false);
             web.setWebViewClient(new WebViewClient() {
                 @Override
@@ -1876,13 +2020,14 @@ public class LauncherActivity extends Activity {
                 }
             });
             web.addJavascriptInterface(new BiosBridge(), "BiosBridge");
-            web.loadUrl("file:///android_asset/www/index.html");
+            web.loadUrl(pageUrl);
             webView = web;
             setContentView(web);
             return true;
         } catch (Throwable t) {
             webView = null;
-            return false;
+            showWebFailed(messageOf(t), pageUrl);
+            return true;
         }
     }
 
@@ -2029,7 +2174,8 @@ public class LauncherActivity extends Activity {
         nativeShown = false;
         statusView = null;
         if (!tryShowWebBios()) {
-            showWebFailed("нет WebView", "file:///android_asset/www/index.html");
+            File missing = new File(new File(getFilesDir(), "bios_www"), "index.html");
+            showWebFailed("exists=false", missing.getAbsolutePath());
         }
     }
 

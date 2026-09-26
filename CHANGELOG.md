@@ -46,9 +46,9 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Пикер BIOS: «Выбрать картинку» копирует в `Documents/the_question_sideload/custom_wallpaper.png`, «Выбрать zip» — в `incoming/picked.zip`. Zip с `extra_hello.rpy` ставится как мод, иначе импортируется в `saves/`. Отмена пикера пишет «отмена».
 
-Офлайн BIOS: `file:///android_asset/www/index.html` из APK. Сеть для оболочки не нужна. Если WebView не открылся, остаётся старый xml.
+Офлайн BIOS: страница лежит в APK и открывается без сети. Если WebView не открылся, остаётся старый xml. Ранний URL `file:///android_asset/www/index.html` в установленном APK давал код -1: каталога `android_asset/www` там не было.
 
-Сборка оболочки: `rapt-overlay/assets/www` копируется в `rapt/project/app/src/main/assets/www`. Без этой копии WebView не попадает в APK и остаётся xml.
+Сборка оболочки: `tools/sync_rapt_overlay.py` копирует `rapt-overlay/assets/www` в `rapt/project/app/src/main/assets/www` и в `res/raw` библиотеки renpyandroid. Без обеих копий лаунчер остаётся на старом xml.
 
 HTML BIOS: плитки в две колонки, на узком экране в одну. Лог отдельной панелью, прогресс в шапке. Если страница не открылась, в launcher.log пишутся код и URL, на экране «WebView не открылся» и кнопка «Старый интерфейс». Выбор хранится в flags/ui_native.
 
@@ -59,5 +59,7 @@ HTML BIOS: плитки в две колонки, на узком экране �
 Контент-пак: `tools/content_pack.zip` не входит в игру. После скачивания в сайдлоад `label start` делает `call extra_pack`, если метка есть. The Question в APK остаётся.
 
 Мост JS: `BiosBridge` вызывает уже существующие действия BIOS. «Скачать контент-пак» качает `tools/content_pack.zip` тем же загрузчиком. Без сети пишет «нет сети», оболочка и The Question остаются.
+
+HTML на диске: лаунчер пишет `getFilesDir()/bios_www/` и открывает `file://` этого `index.html`, не `android_asset`. Байты по очереди: `android_asset/www`, иначе `Documents/the_question_sideload/bios_www`, иначе `R.raw` (`bios_index.html`, `bios_styles.css`, `bios_app.js`). Те же три файла лежат в `game/bios_www/` и пакуются Ren'Py; Java x-assets игры не читает. В `launcher.log` полный путь и `exists=true/false`. Если файла нет, `loadUrl` не вызывается.
 
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.
