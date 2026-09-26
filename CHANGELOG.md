@@ -38,4 +38,6 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Поделиться сейвами: FileProvider из support-v4 отдаёт только `Documents/the_question_sideload/backups`. Кнопка «Поделиться сейвами» сначала делает экспорт, если бэкапов нет, и шлёт zip через ACTION_SEND.
 
+Вёрстка BIOS: заголовок и путь сверху, лог по центру (около 60% свободного места, не меньше ~40% экрана), кнопки снизу в отдельном ScrollView.
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.

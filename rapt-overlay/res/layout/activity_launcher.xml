@@ -1,51 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Зачем: тёмный экран Sideload BIOS до запуска Ren'Py. Без чужих картинок. -->
+<!-- Зачем: BIOS на телефоне. Сверху короткий заголовок и путь.
+     Лог по центру, вес 3, не меньше ~40% экрана.
+     Кнопки снизу в своём ScrollView, вес 2, узкий экран их прокручивает
+     и они не закрывают лог. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#1a1420"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="12dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Sideload BIOS"
         android:textColor="#ff8ac8"
-        android:textSize="28sp"
+        android:textSize="20sp"
         android:textStyle="bold" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Путь"
-        android:textColor="#7ee0d6"
-        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/bios_path"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="2dp"
+        android:maxLines="3"
         android:textColor="#f4e9f2"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:typeface="monospace" />
 
-    <TextView
+    <ProgressBar
+        android:id="@+id/bios_progress"
+        style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
-        android:text="Лог"
+        android:layout_marginTop="8dp"
+        android:max="100"
+        android:progress="0" />
+
+    <TextView
+        android:id="@+id/bios_progress_line"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:textColor="#7ee0d6"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:typeface="monospace" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="4dp"
-        android:layout_weight="1"
+        android:layout_marginTop="6dp"
+        android:layout_weight="3"
         android:background="#120e18"
+        android:fillViewport="true"
+        android:minHeight="160dp"
         android:padding="8dp">
 
         <TextView
@@ -57,81 +64,108 @@
             android:typeface="monospace" />
     </ScrollView>
 
-    <Button
-        android:id="@+id/bios_download"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/sideload_button"
-        android:text="Скачать мод"
-        android:textAllCaps="false"
-        android:textColor="#1a1420"
-        android:textStyle="bold" />
+        android:layout_height="0dp"
+        android:layout_marginTop="6dp"
+        android:layout_weight="2"
+        android:fillViewport="false">
 
-    <Button
-        android:id="@+id/bios_install"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/sideload_button"
-        android:text="Установить zip"
-        android:textAllCaps="false"
-        android:textColor="#1a1420"
-        android:textStyle="bold" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-    <Button
-        android:id="@+id/bios_delete"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/sideload_button"
-        android:text="Удалить мод"
-        android:textAllCaps="false"
-        android:textColor="#1a1420"
-        android:textStyle="bold" />
+            <Button
+                android:id="@+id/bios_download"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Скачать мод"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/bios_export_saves"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/sideload_button"
-        android:text="Экспорт сейвов"
-        android:textAllCaps="false"
-        android:textColor="#1a1420"
-        android:textStyle="bold" />
+            <Button
+                android:id="@+id/bios_install"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Установить zip"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/bios_share_saves"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/sideload_button"
-        android:text="Поделиться сейвами"
-        android:textAllCaps="false"
-        android:textColor="#1a1420"
-        android:textStyle="bold" />
+            <Button
+                android:id="@+id/bios_delete"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Удалить мод"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/bios_import_saves"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/sideload_button"
-        android:text="Импорт сейвов"
-        android:textAllCaps="false"
-        android:textColor="#1a1420"
-        android:textStyle="bold" />
+            <Button
+                android:id="@+id/bios_export_saves"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Экспорт сейвов"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
-    <Button
-        android:id="@+id/bios_start"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/sideload_button_start"
-        android:text="Запустить игру"
-        android:textAllCaps="false"
-        android:textColor="#1a1420"
-        android:textStyle="bold" />
+            <Button
+                android:id="@+id/bios_share_saves"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Поделиться сейвами"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/bios_import_saves"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Импорт сейвов"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/bios_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button_start"
+                android:minHeight="40dp"
+                android:text="Запустить игру"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </ScrollView>
 
 </LinearLayout>
