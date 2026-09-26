@@ -44,7 +44,9 @@ Zip из incoming распаковывается прямо в the_question_side
 4. FileProvider
    rapt-overlay/res/xml/file_paths.xml
    Куда: rapt/project/renpyandroid/src/main/res/xml/file_paths.xml
-   Открывает только Documents/the_question_sideload/backups.
+   Открывает только Documents/the_question_sideload/backups
+   и getFilesDir() для update.apk. Вся Documents не входит.
+   Authority: ${applicationId}.fileprovider
    Класс: android.support.v4.content.FileProvider из appcompat-v7.
 
 Если RAPT собирает проект с update_always, шаблон

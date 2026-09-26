@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Зачем: FileProvider отдаёт только zip бэкапов сейвов.
-     Корень — внешнее хранилище, путь сужен до Documents/the_question_sideload/backups.
-     Вся Documents и остальной диск сюда не входят. -->
+<!-- Зачем: два узких корня.
+     save_backups — только Documents/the_question_sideload/backups.
+     apk_update — только getFilesDir() приложения, не Documents. -->
 <paths>
     <external-path
         name="save_backups"
         path="Documents/the_question_sideload/backups" />
+    <!-- Только приватный files dir приложения, не Documents. -->
+    <files-path
+        name="apk_update"
+        path="." />
 </paths>

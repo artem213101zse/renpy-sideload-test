@@ -7,6 +7,7 @@ package com.artemdev.sideloadlab;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.content.FileProvider;
 import android.net.Uri;
@@ -29,6 +30,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -43,6 +47,13 @@ public class LauncherActivity extends Activity {
     private static final int REQ_STORAGE = 41;
     private static final String MOD_URL =
             "https://raw.githubusercontent.com/artem213101zse/renpy-sideload-test/main/tools/sample_mod.zip";
+    private static final String RELEASES_URL =
+            "https://api.github.com/repos/artem213101zse/renpy-sideload-test/releases/latest";
+
+    private volatile String updateApkUrl;
+    private volatile String updateApkName;
+    private volatile String updateApkDigest;
+    private volatile String updateApkShaUrl;
 
     private boolean downloadRunning = false;
 
@@ -97,6 +108,18 @@ public class LauncherActivity extends Activity {
             @Override
             public void onClick(View v) {
                 shareSaves();
+            }
+        });
+        findViewById(R.id.bios_update_check).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                checkUpdate();
+            }
+        });
+        findViewById(R.id.bios_update_install).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                downloadUpdate();
             }
         });
         findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
@@ -855,6 +878,184 @@ public class LauncherActivity extends Activity {
                 in.close();
             }
         }
+    }
+
+    private void checkUpdate() {
+        appendStatus("\nПроверяю релиз.");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                checkUpdateInBackground();
+            }
+        }).start();
+    }
+
+    private void checkUpdateInBackground() {
+        HttpURLConnection conn = null;
+        try {
+            conn = openGet(RELEASES_URL);
+            int code = conn.getResponseCode();
+            if (code == 404) {
+                updateApkUrl = null;
+                postStatus("\nРелиза нет.");
+                logLine("release missing");
+                return;
+            }
+            if (code != HttpURLConnection.HTTP_OK) {
+                postStatus("\nСервер релизов ответил " + code);
+                logLine("release http " + code);
+                return;
+            }
+            String body = readStream(conn.getInputStream());
+            JSONObject root = new JSONObject(body);
+            String tag = root.optString("tag_name", "");
+            JSONArray assets = root.optJSONArray("assets");
+            StringBuilder report = new StringBuilder();
+            report.append("\nРелиз ").append(tag.length() == 0 ? "(без tag)" : tag);
+            String apkUrl = null;
+            String apkName = null;
+            String digest = null;
+            String shaUrl = null;
+            if (assets != null) {
+                for (int i = 0; i < assets.length(); i++) {
+                    JSONObject asset = assets.optJSONObject(i);
+                    if (asset == null) {
+                        continue;
+                    }
+                    String name = asset.optString("name", "");
+                    report.append("\nasset ").append(name);
+                    String lower = name.toLowerCase(Locale.US);
+                    if (apkUrl == null && lower.endsWith(".apk")) {
+                        apkUrl = asset.optString("browser_download_url", "");
+                        apkName = name;
+                        digest = asset.optString("digest", "");
+                    }
+                }
+                if (apkName != null) {
+                    String shaName = apkName + ".sha256";
+                    for (int i = 0; i < assets.length(); i++) {
+                        JSONObject asset = assets.optJSONObject(i);
+                        if (asset != null && shaName.equals(asset.optString("name", ""))) {
+                            shaUrl = asset.optString("browser_download_url", "");
+                        }
+                    }
+                }
+            }
+            updateApkUrl = apkUrl;
+            updateApkName = apkName;
+            updateApkDigest = digest;
+            updateApkShaUrl = shaUrl;
+            long installed = currentVersionCode();
+            report.append("\nтекущий versionCode ").append(installed);
+            if (apkUrl == null || apkUrl.length() == 0) {
+                updateApkUrl = null;
+                report.append("\nВ релизе нет apk.");
+            } else {
+                report.append("\nНайден ").append(apkName);
+                report.append("\nПоставить можно.");
+            }
+            postStatus(report.toString());
+            logLine("release " + tag + " apk " + apkName);
+        } catch (Exception e) {
+            postStatus("\nПроверка релиза не удалась: " + messageOf(e));
+            logLine("release failed " + messageOf(e));
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    private void downloadUpdate() {
+        if (downloadRunning) {
+            appendStatus("\nСкачивание уже идёт.");
+            return;
+        }
+        downloadRunning = true;
+        appendStatus("\nГотовлю apk.");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (updateApkUrl == null || updateApkUrl.length() == 0) {
+                        checkUpdateInBackground();
+                    }
+                    if (updateApkUrl == null || updateApkUrl.length() == 0) {
+                        postStatus("\nКачать нечего: apk в релизе нет.");
+                        return;
+                    }
+                    String expected = updateApkDigest;
+                    if (normalizeHash(expected) == null && updateApkShaUrl != null && updateApkShaUrl.length() > 0) {
+                        expected = fetchOptionalSha(updateApkShaUrl);
+                    }
+                    final File dest = new File(getFilesDir(), "update.apk");
+                    boolean ok = downloadUrlToFile(updateApkUrl, dest, expected);
+                    if (!ok) {
+                        return;
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            installDownloadedApk(dest);
+                        }
+                    });
+                } finally {
+                    downloadRunning = false;
+                }
+            }
+        }).start();
+    }
+
+    private void installDownloadedApk(File apk) {
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            appendStatus("\nРазреши установку из этого приложения, потом нажми кнопку снова.");
+            logLine("need REQUEST_INSTALL_PACKAGES");
+            try {
+                Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                settings.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(settings);
+            } catch (Exception e) {
+                appendStatus("\nНастройки установки не открылись: " + messageOf(e));
+            }
+            return;
+        }
+        try {
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", apk);
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(uri, "application/vnd.android.package-archive");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            appendStatus("\nОткрыл установщик " + apk.getName());
+            logLine("install apk " + apk.getAbsolutePath());
+        } catch (Exception e) {
+            appendStatus("\nУстановщик не открылся: " + messageOf(e));
+            logLine("install apk failed " + messageOf(e));
+        }
+    }
+
+    private long currentVersionCode() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (Build.VERSION.SDK_INT >= 28) {
+                return info.getLongVersionCode();
+            }
+            return info.versionCode;
+        } catch (Exception e) {
+            return -1L;
+        }
+    }
+
+    private String readStream(InputStream in) throws IOException {
+        byte[] buf = new byte[4096];
+        StringBuilder body = new StringBuilder();
+        int n;
+        while ((n = in.read(buf)) >= 0) {
+            if (n > 0) {
+                body.append(new String(buf, 0, n, "UTF-8"));
+            }
+        }
+        in.close();
+        return body.toString();
     }
 
     private void shareSaves() {
