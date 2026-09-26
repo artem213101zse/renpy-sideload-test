@@ -180,6 +180,32 @@
                 android:textStyle="bold" />
 
             <Button
+                android:id="@+id/bios_pick_image"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Выбрать картинку"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/bios_pick_zip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/sideload_button"
+                android:minHeight="40dp"
+                android:text="Выбрать zip"
+                android:textAllCaps="false"
+                android:textColor="#1a1420"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Button
                 android:id="@+id/bios_start"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -68,6 +68,9 @@ screen sideload_status():
 
             text _("Path: [sideload_path_text]")
 
+            if renpy.loadable("custom_wallpaper.png"):
+                add "custom_wallpaper.png" xalign 0.5 ysize 180
+
             if not sideload_path_text:
                 text _("смотри hook.log")
 

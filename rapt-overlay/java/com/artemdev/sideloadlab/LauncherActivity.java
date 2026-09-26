@@ -7,8 +7,10 @@ package com.artemdev.sideloadlab;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.Intent;
+import android.database.Cursor;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.provider.OpenableColumns;
 import android.support.v4.content.FileProvider;
 import android.net.Uri;
 import android.os.Build;
@@ -45,6 +47,8 @@ import java.util.zip.ZipOutputStream;
 public class LauncherActivity extends Activity {
 
     private static final int REQ_STORAGE = 41;
+    private static final int REQ_PICK_IMAGE = 81;
+    private static final int REQ_PICK_ZIP = 82;
     private static final String MOD_URL =
             "https://raw.githubusercontent.com/artem213101zse/renpy-sideload-test/main/tools/sample_mod.zip";
     private static final String RELEASES_URL =
@@ -122,6 +126,18 @@ public class LauncherActivity extends Activity {
                 downloadUpdate();
             }
         });
+        findViewById(R.id.bios_pick_image).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pickImage();
+            }
+        });
+        findViewById(R.id.bios_pick_zip).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pickZip();
+            }
+        });
         findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -140,6 +156,24 @@ public class LauncherActivity extends Activity {
             return;
         }
         prepareFolders();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQ_PICK_IMAGE && requestCode != REQ_PICK_ZIP) {
+            return;
+        }
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            appendStatus("\nотмена");
+            logLine("picker cancel");
+            return;
+        }
+        if (requestCode == REQ_PICK_IMAGE) {
+            copyWallpaper(data.getData());
+        } else {
+            copyPickedZip(data.getData());
+        }
     }
 
     @Override
@@ -878,6 +912,190 @@ public class LauncherActivity extends Activity {
                 in.close();
             }
         }
+    }
+
+    private void pickImage() {
+        if (sideloadDir == null) {
+            resolvePaths();
+        }
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("image/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivityForResult(intent, REQ_PICK_IMAGE);
+        } catch (Exception e) {
+            appendStatus("\nПикер картинок не открылся: " + messageOf(e));
+            logLine("pick image failed " + messageOf(e));
+        }
+    }
+
+    private void pickZip() {
+        if (incomingDir == null) {
+            resolvePaths();
+        }
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {
+                "application/zip",
+                "application/x-zip-compressed",
+                "*/*"
+        });
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivityForResult(intent, REQ_PICK_ZIP);
+        } catch (Exception e) {
+            appendStatus("\nПикер zip не открылся: " + messageOf(e));
+            logLine("pick zip failed " + messageOf(e));
+        }
+    }
+
+    private void copyWallpaper(Uri uri) {
+        File dest = new File(sideloadDir, "custom_wallpaper.png");
+        try {
+            if (dest.getParentFile() != null && !dest.getParentFile().isDirectory()) {
+                dest.getParentFile().mkdirs();
+            }
+            long bytes = copyUriToFile(uri, dest);
+            String name = displayName(uri);
+            appendStatus("\nКартинка " + name + ", байт " + bytes + "\n" + dest.getAbsolutePath());
+            logLine("wallpaper " + name + " bytes " + bytes + " " + dest.getAbsolutePath());
+        } catch (Exception e) {
+            appendStatus("\nКартинка не скопирована: " + messageOf(e));
+            logLine("wallpaper failed " + messageOf(e));
+        }
+    }
+
+    private void copyPickedZip(Uri uri) {
+        String name = displayName(uri);
+        if (name != null && !name.toLowerCase(Locale.US).endsWith(".zip")) {
+            appendStatus("\nЭто не zip: " + name);
+            logLine("pick not zip " + name);
+            return;
+        }
+        if (incomingDir == null) {
+            resolvePaths();
+        }
+        if (!incomingDir.isDirectory() && !incomingDir.mkdirs()) {
+            appendStatus("\nПапка incoming не создана.");
+            logLine("pick zip no incoming");
+            return;
+        }
+        File dest = new File(incomingDir, "picked.zip");
+        try {
+            long bytes = copyUriToFile(uri, dest);
+            appendStatus("\nZip " + name + ", байт " + bytes + "\n" + dest.getAbsolutePath());
+            logLine("picked zip " + name + " bytes " + bytes);
+            if (zipHasExtraHello(dest)) {
+                appendStatus("\nВ архиве extra_hello.rpy. Ставлю мод.");
+                logLine("picked zip install mod");
+                unzipIntoSideload(dest);
+            } else {
+                appendStatus("\nВ архиве нет extra_hello.rpy. Импорт сейвов.");
+                logLine("picked zip import saves");
+                File saves = savesDir();
+                if (!saves.isDirectory() && !saves.mkdirs()) {
+                    appendStatus("\nПапка saves не создана.");
+                    logLine("picked zip saves mkdir failed");
+                    return;
+                }
+                int count = unzipReplace(dest, saves);
+                appendStatus("\nИмпорт сейвов " + dest.getAbsolutePath() + ", файлов: " + count);
+                logLine("picked zip import " + dest.getAbsolutePath() + " files " + count);
+            }
+        } catch (Exception e) {
+            appendStatus("\nZip не скопирован: " + messageOf(e));
+            logLine("picked zip failed " + messageOf(e));
+        }
+    }
+
+    private boolean zipHasExtraHello(File zip) {
+        ZipFile zipFile = null;
+        try {
+            zipFile = new ZipFile(zip);
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                String name = entry.getName();
+                if (name == null) {
+                    continue;
+                }
+                String norm = name.replace('\\', '/');
+                if (norm.endsWith("extra_hello.rpy")) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            appendStatus("\nАрхив не прочитан: " + messageOf(e));
+            logLine("picked zip read failed " + messageOf(e));
+        } finally {
+            if (zipFile != null) {
+                try {
+                    zipFile.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+        return false;
+    }
+
+    private long copyUriToFile(Uri uri, File dest) throws IOException {
+        InputStream in = null;
+        FileOutputStream out = null;
+        try {
+            in = getContentResolver().openInputStream(uri);
+            if (in == null) {
+                throw new IOException("пустой поток");
+            }
+            out = new FileOutputStream(dest);
+            byte[] buf = new byte[8192];
+            long total = 0;
+            int n;
+            while ((n = in.read(buf)) >= 0) {
+                if (n > 0) {
+                    out.write(buf, 0, n);
+                    total += n;
+                }
+            }
+            out.flush();
+            return total;
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException ignored) {
+                }
+            }
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+    }
+
+    private String displayName(Uri uri) {
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri, new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (index >= 0) {
+                    return cursor.getString(index);
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return uri.getLastPathSegment();
     }
 
     private void checkUpdate() {

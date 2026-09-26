@@ -44,4 +44,6 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Обновление APK: «Проверить обновление» читает последний GitHub Release. «Скачать и установить APK» качает `getFilesDir()/update.apk` с тем же прогрессом и SHA-256 и открывает установщик. Documents не шарится. Тихая установка не делается.
 
+Пикер BIOS: «Выбрать картинку» копирует в `Documents/the_question_sideload/custom_wallpaper.png`, «Выбрать zip» — в `incoming/picked.zip`. Zip с `extra_hello.rpy` ставится как мод, иначе импортируется в `saves/`. Отмена пикера пишет «отмена».
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.
