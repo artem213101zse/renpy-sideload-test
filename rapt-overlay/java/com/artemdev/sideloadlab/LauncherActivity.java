@@ -66,6 +66,8 @@ public class LauncherActivity extends Activity {
     private volatile String updateApkName;
     private volatile String updateApkDigest;
     private volatile String updateApkShaUrl;
+    private volatile long updateAssetSize = -1L;
+    private volatile boolean updateNeeded = true;
 
     private boolean downloadRunning = false;
 
@@ -484,6 +486,26 @@ public class LauncherActivity extends Activity {
                 @Override
                 public void run() {
                     LauncherActivity.this.downloadUpdate();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void installLocalApk() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.installLocalApk();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void downloadUpdateAgain() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.downloadUpdateAgain();
                 }
             });
         }
@@ -1321,6 +1343,7 @@ public class LauncherActivity extends Activity {
             String apkName = null;
             String digest = null;
             String shaUrl = null;
+            long apkSize = -1L;
             if (assets != null) {
                 for (int i = 0; i < assets.length(); i++) {
                     JSONObject asset = assets.optJSONObject(i);
@@ -1334,6 +1357,7 @@ public class LauncherActivity extends Activity {
                         apkUrl = asset.optString("browser_download_url", "");
                         apkName = name;
                         digest = asset.optString("digest", "");
+                        apkSize = asset.optLong("size", -1L);
                     }
                 }
                 if (apkName != null) {
@@ -1350,14 +1374,36 @@ public class LauncherActivity extends Activity {
             updateApkName = apkName;
             updateApkDigest = digest;
             updateApkShaUrl = shaUrl;
+            updateAssetSize = apkSize;
             long installed = currentVersionCode();
-            report.append("\nтекущий versionCode ").append(installed);
+            String installedName = currentVersionName();
+            report.append("\nсвоя версия ").append(installedName);
+            report.append(" versionCode ").append(installed);
+            report.append("\nрелиз ").append(tag);
+            boolean localReady = localApkMatches(apkSize, digest);
+            int compare = compareRelease(tag, installedName, installed);
             if (apkUrl == null || apkUrl.length() == 0) {
                 updateApkUrl = null;
+                updateNeeded = false;
                 report.append("\nВ релизе нет apk.");
+                report.append("\nкачалка не нужна");
+            } else if (compare < 0) {
+                updateNeeded = false;
+                report.append("\nуже последняя");
+                report.append("\nкачалка не нужна");
+            } else if (compare == 0) {
+                updateNeeded = true;
+                report.append("\nверсию сравнить не удалось");
+                report.append("\nкачалка нужна");
             } else {
+                updateNeeded = true;
+                report.append("\nкачалка нужна");
+            }
+            if (localReady) {
+                report.append("\nскачанный apk совпал, повторно качать не нужно");
+            }
+            if (apkName != null) {
                 report.append("\nНайден ").append(apkName);
-                report.append("\nПоставить можно.");
             }
             postStatus(report.toString());
             logLine("release " + tag + " apk " + apkName);
@@ -1389,6 +1435,23 @@ public class LauncherActivity extends Activity {
                         postStatus("\nКачать нечего: apk в релизе нет.");
                         return;
                     }
+                    File existing = new File(getFilesDir(), "update.apk");
+                    if (localApkMatches(updateAssetSize, updateApkDigest)) {
+                        final File ready = existing;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                appendStatus("\nAPK уже скачан, открываю установщик.");
+                                installDownloadedApk(ready);
+                            }
+                        });
+                        return;
+                    }
+                    if (!updateNeeded) {
+                        postStatus("\nуже последняя");
+                        logLine("apk up to date");
+                        return;
+                    }
                     String expected = updateApkDigest;
                     if (normalizeHash(expected) == null && updateApkShaUrl != null && updateApkShaUrl.length() > 0) {
                         expected = fetchOptionalSha(updateApkShaUrl);
@@ -1409,6 +1472,105 @@ public class LauncherActivity extends Activity {
                 }
             }
         }).start();
+    }
+
+    private void installLocalApk() {
+        File dest = new File(getFilesDir(), "update.apk");
+        if (!dest.isFile()) {
+            appendStatus("\nСкачанного apk нет.");
+            logLine("local apk missing");
+            return;
+        }
+        appendStatus("\nСтавлю скачанный apk без повторной загрузки.");
+        installDownloadedApk(dest);
+    }
+
+    private void downloadUpdateAgain() {
+        if (downloadRunning) {
+            appendStatus("\nСкачивание уже идёт.");
+            return;
+        }
+        downloadRunning = true;
+        appendStatus("\nКачаю apk заново.");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (updateApkUrl == null || updateApkUrl.length() == 0) {
+                        checkUpdateInBackground();
+                    }
+                    if (updateApkUrl == null || updateApkUrl.length() == 0) {
+                        postStatus("\nКачать нечего: apk в релизе нет.");
+                        return;
+                    }
+                    String expected = updateApkDigest;
+                    if (normalizeHash(expected) == null && updateApkShaUrl != null && updateApkShaUrl.length() > 0) {
+                        expected = fetchOptionalSha(updateApkShaUrl);
+                    }
+                    final File dest = new File(getFilesDir(), "update.apk");
+                    boolean ok = downloadUrlToFile(updateApkUrl, dest, expected);
+                    if (!ok) {
+                        return;
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            installDownloadedApk(dest);
+                        }
+                    });
+                } finally {
+                    downloadRunning = false;
+                }
+            }
+        }).start();
+    }
+
+    private boolean localApkMatches(long size, String digest) {
+        File apk = new File(getFilesDir(), "update.apk");
+        if (!apk.isFile()) {
+            return false;
+        }
+        String hash = normalizeHash(digest);
+        if (hash != null) {
+            try {
+                return hash.equals(sha256(apk));
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return size > 0 && apk.length() == size;
+    }
+
+    private int compareRelease(String tag, String versionName, long versionCode) {
+        String plain = tag == null ? "" : tag.trim();
+        if (plain.startsWith("v") || plain.startsWith("V")) {
+            plain = plain.substring(1);
+        }
+        if (versionName != null && plain.length() > 0 && plain.equals(versionName)) {
+            return -1;
+        }
+        try {
+            if (plain.length() > 0) {
+                long tagCode = Long.parseLong(plain);
+                if (versionCode >= 0 && tagCode <= versionCode) {
+                    return -1;
+                }
+                if (versionCode >= 0 && tagCode > versionCode) {
+                    return 1;
+                }
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return 0;
+    }
+
+    private String currentVersionName() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return info.versionName == null ? "" : info.versionName;
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private void installDownloadedApk(File apk) {
