@@ -8,25 +8,54 @@
 </head>
 <body>
   <header>
-    <h1>Sideload BIOS</h1>
-    <p id="path" class="path">офлайн-оболочка из APK</p>
+    <div class="title">Sideload BIOS</div>
+    <div id="path" class="path">офлайн-оболочка из APK</div>
+    <div id="barTrack"><div id="bar"></div></div>
+    <div id="progressLine" class="progress"></div>
   </header>
-  <div id="barTrack"><div id="bar"></div></div>
-  <p id="progressLine" class="progress"></p>
-  <pre id="log" class="log"></pre>
-  <div class="buttons">
-    <button type="button" onclick="callBridge('downloadMod')">Скачать мод</button>
-    <button type="button" onclick="callBridge('installZips')">Установить zip</button>
-    <button type="button" onclick="callBridge('deleteMod')">Удалить мод</button>
-    <button type="button" onclick="callBridge('pickImage')">Выбрать картинку</button>
-    <button type="button" onclick="callBridge('pickZip')">Выбрать zip</button>
-    <button type="button" onclick="callBridge('exportSaves')">Экспорт сейвов</button>
-    <button type="button" onclick="callBridge('importSaves')">Импорт сейвов</button>
-    <button type="button" onclick="callBridge('shareSaves')">Поделиться сейвами</button>
-    <button type="button" onclick="callBridge('checkUpdate')">Проверить обновление</button>
-    <button type="button" onclick="callBridge('downloadUpdate')">Скачать и установить APK</button>
-    <button type="button" onclick="callBridge('downloadContentPack')">Скачать контент-пак</button>
-    <button type="button" class="start" onclick="callBridge('startGame')">Запустить игру</button>
+  <div class="workspace">
+    <pre id="log" class="log"></pre>
+    <div class="sections">
+      <section>
+        <h2>Игра</h2>
+        <div class="grid">
+          <button type="button" class="tile start" onclick="callBridge('startGame')"><b>Старт</b><span>Запустить Ren'Py</span></button>
+        </div>
+      </section>
+      <section>
+        <h2>Контент</h2>
+        <div class="grid">
+          <button type="button" class="tile" onclick="callBridge('downloadMod')"><b>Скачать мод</b><span>sample_mod.zip</span></button>
+          <button type="button" class="tile" onclick="callBridge('installZips')"><b>Установить zip</b><span>из incoming</span></button>
+          <button type="button" class="tile" onclick="callBridge('deleteMod')"><b>Удалить мод</b><span>extra_hello</span></button>
+          <button type="button" class="tile" onclick="callBridge('pickImage')"><b>Картинка</b><span>обои из пикера</span></button>
+          <button type="button" class="tile" onclick="callBridge('pickZip')"><b>Zip</b><span>мод или сейвы</span></button>
+          <button type="button" class="tile" onclick="callBridge('downloadContentPack')"><b>Контент-пак</b><span>нет в APK</span></button>
+        </div>
+      </section>
+      <section>
+        <h2>Сейвы</h2>
+        <div class="grid">
+          <button type="button" class="tile" onclick="callBridge('exportSaves')"><b>Экспорт</b><span>zip в backups</span></button>
+          <button type="button" class="tile" onclick="callBridge('importSaves')"><b>Импорт</b><span>в saves</span></button>
+          <button type="button" class="tile" onclick="callBridge('shareSaves')"><b>Поделиться</b><span>только бэкап</span></button>
+        </div>
+      </section>
+      <section>
+        <h2>Обновление</h2>
+        <div class="grid">
+          <button type="button" class="tile" onclick="callBridge('checkUpdate')"><b>Проверить</b><span>latest release</span></button>
+          <button type="button" class="tile" onclick="callBridge('installLocalApk')"><b>Установить APK</b><span>уже скачанный</span></button>
+          <button type="button" class="tile" onclick="callBridge('downloadUpdateAgain')"><b>Скачать заново</b><span>даже если версия та же</span></button>
+        </div>
+      </section>
+      <section>
+        <h2>Система</h2>
+        <div class="grid">
+          <button type="button" class="tile" onclick="callBridge('useNativeUi')"><b>Старый интерфейс</b><span>xml этой сессии</span></button>
+        </div>
+      </section>
+    </div>
   </div>
   <script src="app.js"></script>
 </body>

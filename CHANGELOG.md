@@ -50,6 +50,8 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Сборка оболочки: `rapt-overlay/assets/www` копируется в `rapt/project/app/src/main/assets/www`. Без этой копии WebView не попадает в APK и остаётся xml.
 
+HTML BIOS: плитки в две колонки, на узком экране в одну. Лог отдельной панелью, прогресс в шапке. Если страница не открылась, в launcher.log пишутся код и URL, на экране «WebView не открылся» и кнопка «Старый интерфейс». Выбор хранится в flags/ui_native.
+
 Контент-пак: `tools/content_pack.zip` не входит в игру. После скачивания в сайдлоад `label start` делает `call extra_pack`, если метка есть. The Question в APK остаётся.
 
 Мост JS: `BiosBridge` вызывает уже существующие действия BIOS. «Скачать контент-пак» качает `tools/content_pack.zip` тем же загрузчиком. Без сети пишет «нет сети», оболочка и The Question остаются.

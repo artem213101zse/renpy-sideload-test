@@ -22,6 +22,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -82,11 +84,13 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (!tryShowWebBios()) {
+        resolvePaths();
+        if (flagExists("ui_native")) {
             showNativeBios();
+        } else if (!tryShowWebBios()) {
+            showWebFailed("нет WebView", "file:///android_asset/www/index.html");
         }
 
-        resolvePaths();
         installNativeEngine();
         if (needsRuntimePermission()) {
             setStatus("Запрашиваю доступ к памяти.\n" + pathReport());
@@ -488,6 +492,26 @@ public class LauncherActivity extends Activity {
                 @Override
                 public void run() {
                     LauncherActivity.this.downloadContentPack();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void useNativeUi() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.useNativeUi();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void useHtmlUi() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.useHtmlUi();
                 }
             });
         }
@@ -1664,7 +1688,16 @@ public class LauncherActivity extends Activity {
                 @Override
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                     if (failingUrl != null && failingUrl.indexOf("index.html") >= 0) {
-                        showNativeBios();
+                        showWebFailed(String.valueOf(errorCode), failingUrl);
+                    }
+                }
+
+                @Override
+                public void onReceivedError(WebView view, android.webkit.WebResourceRequest request, android.webkit.WebResourceError error) {
+                    if (request != null && request.isForMainFrame()) {
+                        String url = request.getUrl() == null ? "" : request.getUrl().toString();
+                        int code = error == null ? -1 : error.getErrorCode();
+                        showWebFailed(String.valueOf(code), url);
                     }
                 }
             });
@@ -1751,12 +1784,109 @@ public class LauncherActivity extends Activity {
                 pickZip();
             }
         });
+        findViewById(R.id.bios_html).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                useHtmlUi();
+            }
+        });
         findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startGame();
             }
         });
+    }
+
+    private File flagFile(String name) {
+        if (sideloadDir == null) {
+            resolvePaths();
+        }
+        return new File(new File(sideloadDir, "flags"), name);
+    }
+
+    private boolean flagExists(String name) {
+        try {
+            return flagFile(name).isFile();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void writeFlag(String name) {
+        try {
+            File file = flagFile(name);
+            File dir = file.getParentFile();
+            if (dir != null && !dir.isDirectory()) {
+                dir.mkdirs();
+            }
+            FileOutputStream out = new FileOutputStream(file);
+            try {
+                out.write("1\n".getBytes("UTF-8"));
+            } finally {
+                out.close();
+            }
+            logLine("flag set " + file.getAbsolutePath());
+        } catch (Exception e) {
+            logLine("flag set failed " + name + " " + messageOf(e));
+        }
+    }
+
+    private void deleteFlag(String name) {
+        try {
+            File file = flagFile(name);
+            if (file.exists() && file.delete()) {
+                logLine("flag cleared " + file.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            logLine("flag clear failed " + name + " " + messageOf(e));
+        }
+    }
+
+    private void useNativeUi() {
+        writeFlag("ui_native");
+        nativeShown = false;
+        showNativeBios();
+        appendStatus("\nСтарый интерфейс");
+    }
+
+    private void useHtmlUi() {
+        deleteFlag("ui_native");
+        nativeShown = false;
+        statusView = null;
+        if (!tryShowWebBios()) {
+            showWebFailed("нет WebView", "file:///android_asset/www/index.html");
+        }
+    }
+
+    private void showWebFailed(String code, String url) {
+        logLine("webview error code " + code + " url " + url);
+        pageReady = false;
+        webView = null;
+        nativeShown = false;
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setBackgroundColor(0xFF1a1420);
+        box.setPadding(32, 32, 32, 32);
+        TextView title = new TextView(this);
+        title.setText("WebView не открылся");
+        title.setTextColor(0xFFf4e9f2);
+        title.setTextSize(20);
+        TextView detail = new TextView(this);
+        detail.setText("код " + code + "\n" + url);
+        detail.setTextColor(0xFF7ee0d6);
+        Button button = new Button(this);
+        button.setText("Старый интерфейс");
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                useNativeUi();
+            }
+        });
+        box.addView(title);
+        box.addView(detail);
+        box.addView(button);
+        setContentView(box);
     }
 
     private void pushWebLog(String text) {

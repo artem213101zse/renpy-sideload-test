@@ -12,16 +12,15 @@ body {
   padding: 12px;
   box-sizing: border-box;
 }
-header h1 {
-  margin: 0;
+.title {
   color: #ff8ac8;
   font-size: 20px;
+  font-weight: bold;
 }
-.path, .progress, .log {
+.path, .progress, .log, .tile span {
   font-family: monospace;
-  font-size: 12px;
 }
-.path { color: #f4e9f2; margin: 4px 0 8px; }
+.path { font-size: 12px; margin: 4px 0; }
 #barTrack {
   height: 8px;
   background: #120e18;
@@ -32,31 +31,55 @@ header h1 {
   width: 0;
   background: #7ee0d6;
 }
-.progress { color: #7ee0d6; min-height: 1.2em; margin: 6px 0; }
+.progress { color: #7ee0d6; min-height: 1.2em; font-size: 12px; margin: 4px 0 8px; }
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 10px;
+}
 .log {
-  flex: 1 1 40%;
+  flex: 1 1 42%;
   min-height: 40%;
   margin: 0;
   padding: 8px;
   overflow: auto;
   background: #120e18;
   white-space: pre-wrap;
+  font-size: 12px;
 }
-.buttons {
-  flex: 0 1 36%;
+.sections {
+  flex: 1 1 58%;
   overflow: auto;
-  margin-top: 8px;
 }
-button {
+h2 {
+  margin: 8px 0 6px;
+  color: #7ee0d6;
+  font-size: 13px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.tile {
   display: block;
-  width: 100%;
-  margin-top: 4px;
-  min-height: 40px;
-  border: 0;
-  border-radius: 10px;
-  background: #ff8ac8;
-  color: #1a1420;
-  font-weight: bold;
-  font-size: 14px;
+  width: auto;
+  margin: 0;
+  min-height: 64px;
+  padding: 8px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid #ff8ac8;
+  background: #241a2e;
+  color: #f4e9f2;
 }
-button.start { background: #2ec4b6; }
+.tile b { display: block; color: #ff8ac8; font-size: 14px; }
+.tile span { display: block; color: #7ee0d6; font-size: 11px; margin-top: 4px; }
+.tile.start { border-color: #2ec4b6; }
+.tile.start b { color: #2ec4b6; }
+@media (max-width: 560px) {
+  .workspace { flex-direction: column; }
+  .grid { grid-template-columns: 1fr; }
+  .log { min-height: 40vh; }
+}
