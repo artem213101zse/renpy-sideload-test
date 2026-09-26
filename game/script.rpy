@@ -14,6 +14,9 @@ label start:
     if renpy.has_label("extra_inject"):
         call extra_inject
 
+    if renpy.has_label("extra_pack"):
+        call extra_pack
+
     # Start by playing some music.
     play music "illurock.opus"
 

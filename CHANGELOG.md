@@ -48,4 +48,6 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Офлайн BIOS: `file:///android_asset/www/index.html` из APK. Сеть для оболочки не нужна. Если WebView не открылся, остаётся старый xml.
 
+Контент-пак: `tools/content_pack.zip` не входит в игру. После скачивания в сайдлоад `label start` делает `call extra_pack`, если метка есть. The Question в APK остаётся.
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.
