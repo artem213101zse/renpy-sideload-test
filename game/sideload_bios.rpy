@@ -27,6 +27,7 @@ init python:
                 store.bios_open_note = u"BIOS не открылся: нет PythonSDLActivity."
                 return
             intent = Intent(activity, Launcher)
+            intent.putExtra("force_bios", True)
             intent.setFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP

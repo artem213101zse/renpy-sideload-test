@@ -91,6 +91,10 @@ screen sideload_status():
             else:
                 text _("Мод ещё не загружен. Распакуйте zip в папку sideload и перезапустите игру.")
 
+            textbutton _("Открывать Ren'Py сразу") action Function(sideload_toggle_boot)
+            if boot_note:
+                text boot_note substitute False
+
             if renpy.android:
                 textbutton _("BIOS") action Function(open_sideload_bios)
                 if bios_open_note:

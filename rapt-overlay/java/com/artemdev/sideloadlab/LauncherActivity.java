@@ -85,6 +85,12 @@ public class LauncherActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         resolvePaths();
+        boolean forceBios = getIntent() != null && getIntent().getBooleanExtra("force_bios", false);
+        if (!forceBios && flagExists("boot_renpy")) {
+            startGame();
+            finish();
+            return;
+        }
         if (flagExists("ui_native")) {
             showNativeBios();
         } else if (!tryShowWebBios()) {
@@ -101,6 +107,12 @@ public class LauncherActivity extends Activity {
             return;
         }
         prepareFolders();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
     }
 
     @Override
