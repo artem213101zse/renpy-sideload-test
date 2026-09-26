@@ -18,6 +18,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.view.View;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -56,6 +57,8 @@ public class LauncherActivity extends Activity {
             "https://raw.githubusercontent.com/artem213101zse/renpy-sideload-test/main/tools/sample_mod.zip";
     private static final String RELEASES_URL =
             "https://api.github.com/repos/artem213101zse/renpy-sideload-test/releases/latest";
+    private static final String CONTENT_URL =
+            "https://raw.githubusercontent.com/artem213101zse/renpy-sideload-test/main/tools/content_pack.zip";
 
     private volatile String updateApkUrl;
     private volatile String updateApkName;
@@ -302,6 +305,194 @@ public class LauncherActivity extends Activity {
         return "Путь: " + path + "\nincoming: " + incoming;
     }
 
+    private void downloadContentPack() {
+        if (downloadRunning) {
+            appendStatus("\nСкачивание уже идёт.");
+            return;
+        }
+        if (sideloadDir == null || incomingDir == null) {
+            resolvePaths();
+        }
+        downloadRunning = true;
+        appendStatus("\nКачаю контент-пак.");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (incomingDir == null || (!incomingDir.isDirectory() && !incomingDir.mkdirs())) {
+                        postStatus("\nНет папки incoming.");
+                        return;
+                    }
+                    String expected = fetchOptionalSha(CONTENT_URL + ".sha256");
+                    final File dest = new File(incomingDir, "content_pack.zip");
+                    boolean ok = downloadUrlToFile(CONTENT_URL, dest, expected);
+                    if (!ok) {
+                        return;
+                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            appendStatus("\nКонтент-пак скачан. Ставлю в сайдлоад.");
+                            logLine("install content_pack.zip");
+                            unzipIntoSideload(dest);
+                        }
+                    });
+                } finally {
+                    downloadRunning = false;
+                }
+            }
+        }).start();
+    }
+
+    private boolean isNoNetwork(Throwable error) {
+        Throwable cursor = error;
+        while (cursor != null) {
+            if (cursor instanceof java.net.UnknownHostException) {
+                return true;
+            }
+            if (cursor instanceof java.net.ConnectException) {
+                return true;
+            }
+            String message = cursor.getMessage();
+            if (message != null) {
+                String lower = message.toLowerCase(Locale.US);
+                if (lower.indexOf("unable to resolve host") >= 0) {
+                    return true;
+                }
+                if (lower.indexOf("network is unreachable") >= 0) {
+                    return true;
+                }
+                if (lower.indexOf("no address associated") >= 0) {
+                    return true;
+                }
+            }
+            cursor = cursor.getCause();
+        }
+        return false;
+    }
+
+    public class BiosBridge {
+        @JavascriptInterface
+        public void downloadMod() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.downloadMod();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void installZips() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.installZips();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void deleteMod() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.deleteMod();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void pickImage() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.pickImage();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void pickZip() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.pickZip();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void exportSaves() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.exportSaves();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void importSaves() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.importSaves();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void shareSaves() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.shareSaves();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void checkUpdate() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.checkUpdate();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void downloadUpdate() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.downloadUpdate();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void startGame() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.startGame();
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void downloadContentPack() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    LauncherActivity.this.downloadContentPack();
+                }
+            });
+        }
+    }
+
     private void downloadMod() {
         if (downloadRunning) {
             appendStatus("\nСкачивание уже идёт.");
@@ -410,8 +601,13 @@ public class LauncherActivity extends Activity {
             renamed = true;
             return acceptHash(dest, expectedHash);
         } catch (Exception e) {
-            postStatus("\nСкачивание не удалось: " + messageOf(e));
-            logLine("download failed " + messageOf(e));
+            if (isNoNetwork(e)) {
+                postStatus("\nнет сети");
+                logLine("no network");
+            } else {
+                postStatus("\nСкачивание не удалось: " + messageOf(e));
+                logLine("download failed " + messageOf(e));
+            }
             return false;
         } finally {
             if (in != null) {
@@ -1472,6 +1668,7 @@ public class LauncherActivity extends Activity {
                     }
                 }
             });
+            web.addJavascriptInterface(new BiosBridge(), "BiosBridge");
             web.loadUrl("file:///android_asset/www/index.html");
             webView = web;
             setContentView(web);

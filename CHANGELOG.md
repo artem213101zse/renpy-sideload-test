@@ -50,4 +50,6 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Контент-пак: `tools/content_pack.zip` не входит в игру. После скачивания в сайдлоад `label start` делает `call extra_pack`, если метка есть. The Question в APK остаётся.
 
+Мост JS: `BiosBridge` вызывает уже существующие действия BIOS. «Скачать контент-пак» качает `tools/content_pack.zip` тем же загрузчиком. Без сети пишет «нет сети», оболочка и The Question остаются.
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.
