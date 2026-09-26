@@ -48,6 +48,8 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Офлайн BIOS: `file:///android_asset/www/index.html` из APK. Сеть для оболочки не нужна. Если WebView не открылся, остаётся старый xml.
 
+Сборка оболочки: `rapt-overlay/assets/www` копируется в `rapt/project/app/src/main/assets/www`. Без этой копии WebView не попадает в APK и остаётся xml.
+
 Контент-пак: `tools/content_pack.zip` не входит в игру. После скачивания в сайдлоад `label start` делает `call extra_pack`, если метка есть. The Question в APK остаётся.
 
 Мост JS: `BiosBridge` вызывает уже существующие действия BIOS. «Скачать контент-пак» качает `tools/content_pack.zip` тем же загрузчиком. Без сети пишет «нет сети», оболочка и The Question остаются.

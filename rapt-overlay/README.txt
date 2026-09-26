@@ -49,6 +49,16 @@ Zip из incoming распаковывается прямо в the_question_side
    Authority: ${applicationId}.fileprovider
    Класс: android.support.v4.content.FileProvider из appcompat-v7.
 
+5. Офлайн WebView
+   rapt-overlay/assets/www/index.html, styles.css, app.js
+   Куда копировать, без префикса x-:
+   rapt/project/app/src/main/assets/www/
+   WebView открывает file:///android_asset/www/index.html.
+   Файлы внутри x-rapt-overlay/x-assets/x-www/ игра не читает как эту оболочку.
+   Без этого копирования лаунчер остаётся на старом xml.
+   Java из rapt-overlay/java/.../LauncherActivity.java копируется в
+   rapt/project/renpyandroid/src/main/java/com/artemdev/sideloadlab/LauncherActivity.java
+
 Если RAPT собирает проект с update_always, шаблон
 rapt/templates/app-AndroidManifest.xml снова затирает манифест.
 Тогда фрагмент нужно вставить ещё раз. Сам Java-класс шаблон не затирает.
