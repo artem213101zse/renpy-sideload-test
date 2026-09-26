@@ -46,4 +46,6 @@ Zip сабмода в git: `tools/sample_mod.zip`, внутри `label extra_inj
 
 Пикер BIOS: «Выбрать картинку» копирует в `Documents/the_question_sideload/custom_wallpaper.png`, «Выбрать zip» — в `incoming/picked.zip`. Zip с `extra_hello.rpy` ставится как мод, иначе импортируется в `saves/`. Отмена пикера пишет «отмена».
 
+Офлайн BIOS: `file:///android_asset/www/index.html` из APK. Сеть для оболочки не нужна. Если WebView не открылся, остаётся старый xml.
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.

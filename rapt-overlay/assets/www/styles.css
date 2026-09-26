@@ -1,0 +1,62 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #1a1420;
+  color: #f4e9f2;
+  font-family: sans-serif;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+}
+header h1 {
+  margin: 0;
+  color: #ff8ac8;
+  font-size: 20px;
+}
+.path, .progress, .log {
+  font-family: monospace;
+  font-size: 12px;
+}
+.path { color: #f4e9f2; margin: 4px 0 8px; }
+#barTrack {
+  height: 8px;
+  background: #120e18;
+  border-radius: 4px;
+}
+#bar {
+  height: 100%;
+  width: 0;
+  background: #7ee0d6;
+}
+.progress { color: #7ee0d6; min-height: 1.2em; margin: 6px 0; }
+.log {
+  flex: 1 1 40%;
+  min-height: 40%;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  background: #120e18;
+  white-space: pre-wrap;
+}
+.buttons {
+  flex: 0 1 36%;
+  overflow: auto;
+  margin-top: 8px;
+}
+button {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: #ff8ac8;
+  color: #1a1420;
+  font-weight: bold;
+  font-size: 14px;
+}
+button.start { background: #2ec4b6; }

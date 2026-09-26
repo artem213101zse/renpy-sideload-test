@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sideload BIOS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Sideload BIOS</h1>
+    <p id="path" class="path">офлайн-оболочка из APK</p>
+  </header>
+  <div id="barTrack"><div id="bar"></div></div>
+  <p id="progressLine" class="progress"></p>
+  <pre id="log" class="log"></pre>
+  <div class="buttons">
+    <button type="button" onclick="callBridge('downloadMod')">Скачать мод</button>
+    <button type="button" onclick="callBridge('installZips')">Установить zip</button>
+    <button type="button" onclick="callBridge('deleteMod')">Удалить мод</button>
+    <button type="button" onclick="callBridge('pickImage')">Выбрать картинку</button>
+    <button type="button" onclick="callBridge('pickZip')">Выбрать zip</button>
+    <button type="button" onclick="callBridge('exportSaves')">Экспорт сейвов</button>
+    <button type="button" onclick="callBridge('importSaves')">Импорт сейвов</button>
+    <button type="button" onclick="callBridge('shareSaves')">Поделиться сейвами</button>
+    <button type="button" onclick="callBridge('checkUpdate')">Проверить обновление</button>
+    <button type="button" onclick="callBridge('downloadUpdate')">Скачать и установить APK</button>
+    <button type="button" onclick="callBridge('downloadContentPack')">Скачать контент-пак</button>
+    <button type="button" class="start" onclick="callBridge('startGame')">Запустить игру</button>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

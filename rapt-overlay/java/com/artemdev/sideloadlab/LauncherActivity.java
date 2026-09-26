@@ -18,6 +18,9 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.view.View;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -65,6 +68,10 @@ public class LauncherActivity extends Activity {
     private TextView pathView;
     private TextView progressLine;
     private ProgressBar progressBar;
+    private WebView webView;
+    private boolean pageReady = false;
+    private boolean nativeShown = false;
+    private final StringBuilder webBuffer = new StringBuilder();
     private File sideloadDir;
     private File incomingDir;
     private File logFile;
@@ -72,78 +79,9 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_launcher);
-
-        pathView = (TextView) findViewById(R.id.bios_path);
-        statusView = (TextView) findViewById(R.id.bios_log);
-        progressBar = (ProgressBar) findViewById(R.id.bios_progress);
-        progressLine = (TextView) findViewById(R.id.bios_progress_line);
-        findViewById(R.id.bios_download).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                downloadMod();
-            }
-        });
-        findViewById(R.id.bios_install).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                installZips();
-            }
-        });
-        findViewById(R.id.bios_delete).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                deleteMod();
-            }
-        });
-        findViewById(R.id.bios_export_saves).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                exportSaves();
-            }
-        });
-        findViewById(R.id.bios_import_saves).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                importSaves();
-            }
-        });
-        findViewById(R.id.bios_share_saves).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                shareSaves();
-            }
-        });
-        findViewById(R.id.bios_update_check).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                checkUpdate();
-            }
-        });
-        findViewById(R.id.bios_update_install).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                downloadUpdate();
-            }
-        });
-        findViewById(R.id.bios_pick_image).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                pickImage();
-            }
-        });
-        findViewById(R.id.bios_pick_zip).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                pickZip();
-            }
-        });
-        findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startGame();
-            }
-        });
+        if (!tryShowWebBios()) {
+            showNativeBios();
+        }
 
         resolvePaths();
         installNativeEngine();
@@ -644,6 +582,23 @@ public class LauncherActivity extends Activity {
                         progressBar.setIndeterminate(true);
                     }
                 }
+                pushWebProgress(line, pct);
+            }
+        });
+    }
+
+    private void pushWebProgress(final String line, final int pct) {
+        if (webView == null || !pageReady) {
+            return;
+        }
+        final String js = "if(window.biosProgress){window.biosProgress(" + jsString(line) + "," + pct + ");}";
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                if (webView == null) {
+                    return;
+                }
+                webView.evaluateJavascript(js, null);
             }
         });
     }
@@ -1496,12 +1451,189 @@ public class LauncherActivity extends Activity {
         }
     }
 
+    private boolean tryShowWebBios() {
+        try {
+            WebView web = new WebView(this);
+            WebSettings settings = web.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setAllowFileAccess(true);
+            settings.setDomStorageEnabled(false);
+            web.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    pageReady = true;
+                    flushWebBuffer();
+                }
+
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    if (failingUrl != null && failingUrl.indexOf("index.html") >= 0) {
+                        showNativeBios();
+                    }
+                }
+            });
+            web.loadUrl("file:///android_asset/www/index.html");
+            webView = web;
+            setContentView(web);
+            return true;
+        } catch (Throwable t) {
+            webView = null;
+            return false;
+        }
+    }
+
+    private void showNativeBios() {
+        if (nativeShown) {
+            return;
+        }
+        nativeShown = true;
+        pageReady = false;
+        webView = null;
+        setContentView(R.layout.activity_launcher);
+        pathView = (TextView) findViewById(R.id.bios_path);
+        statusView = (TextView) findViewById(R.id.bios_log);
+        progressBar = (ProgressBar) findViewById(R.id.bios_progress);
+        progressLine = (TextView) findViewById(R.id.bios_progress_line);
+        findViewById(R.id.bios_download).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                downloadMod();
+            }
+        });
+        findViewById(R.id.bios_install).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                installZips();
+            }
+        });
+        findViewById(R.id.bios_delete).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                deleteMod();
+            }
+        });
+        findViewById(R.id.bios_export_saves).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                exportSaves();
+            }
+        });
+        findViewById(R.id.bios_import_saves).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                importSaves();
+            }
+        });
+        findViewById(R.id.bios_share_saves).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                shareSaves();
+            }
+        });
+        findViewById(R.id.bios_update_check).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                checkUpdate();
+            }
+        });
+        findViewById(R.id.bios_update_install).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                downloadUpdate();
+            }
+        });
+        findViewById(R.id.bios_pick_image).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pickImage();
+            }
+        });
+        findViewById(R.id.bios_pick_zip).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pickZip();
+            }
+        });
+        findViewById(R.id.bios_start).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startGame();
+            }
+        });
+    }
+
+    private void pushWebLog(String text) {
+        if (text == null) {
+            return;
+        }
+        if (webView == null || !pageReady) {
+            webBuffer.append(text);
+            return;
+        }
+        evalJs("biosLog", text);
+    }
+
+    private void flushWebBuffer() {
+        if (webBuffer.length() == 0) {
+            return;
+        }
+        String text = webBuffer.toString();
+        webBuffer.setLength(0);
+        evalJs("biosLog", text);
+    }
+
+    private void evalJs(String fn, String arg) {
+        if (webView == null) {
+            return;
+        }
+        final String js = "if(window." + fn + "){window." + fn + "(" + jsString(arg) + ");}";
+        webView.post(new Runnable() {
+            @Override
+            public void run() {
+                if (webView == null) {
+                    return;
+                }
+                if (Build.VERSION.SDK_INT >= 19) {
+                    webView.evaluateJavascript(js, null);
+                } else {
+                    webView.loadUrl("javascript:" + js);
+                }
+            }
+        });
+    }
+
+    private String jsString(String text) {
+        StringBuilder out = new StringBuilder();
+        out.append('"');
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\\' || c == '"') {
+                out.append('\\');
+                out.append(c);
+            } else if (c == '\n') {
+                out.append("\\n");
+            } else if (c == '\r') {
+                out.append("\\r");
+            } else {
+                out.append(c);
+            }
+        }
+        out.append('"');
+        return out.toString();
+    }
+
     private void setStatus(String text) {
-        statusView.setText(text);
+        if (statusView != null) {
+            statusView.setText(text);
+        }
+        pushWebLog(text);
     }
 
     private void appendStatus(String text) {
-        statusView.append(text);
+        if (statusView != null) {
+            statusView.append(text);
+        }
+        pushWebLog(text);
     }
 
     private String messageOf(Throwable t) {
