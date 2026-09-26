@@ -15,18 +15,21 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.renpy.android.PythonSDLActivity;
 import org.renpy.android.R;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Enumeration;
@@ -45,6 +48,8 @@ public class LauncherActivity extends Activity {
 
     private TextView statusView;
     private TextView pathView;
+    private TextView progressLine;
+    private ProgressBar progressBar;
     private File sideloadDir;
     private File incomingDir;
     private File logFile;
@@ -56,6 +61,8 @@ public class LauncherActivity extends Activity {
 
         pathView = (TextView) findViewById(R.id.bios_path);
         statusView = (TextView) findViewById(R.id.bios_log);
+        progressBar = (ProgressBar) findViewById(R.id.bios_progress);
+        progressLine = (TextView) findViewById(R.id.bios_progress_line);
         findViewById(R.id.bios_download).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -319,82 +326,99 @@ public class LauncherActivity extends Activity {
     }
 
     private void downloadModInBackground() {
-        HttpURLConnection conn = null;
-        InputStream in = null;
-        FileOutputStream out = null;
-        File part = new File(incomingDir, "sample_mod.zip.part");
-        File dest = new File(incomingDir, "sample_mod.zip");
         try {
             if (!incomingDir.isDirectory() && !incomingDir.mkdirs()) {
                 postStatus("\nНет папки incoming.");
                 return;
             }
-            URL url = new URL(MOD_URL);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setInstanceFollowRedirects(true);
-            conn.setConnectTimeout(15000);
-            conn.setReadTimeout(30000);
-            conn.setRequestProperty("User-Agent", "SideloadBIOS");
-            conn.connect();
+            String expected = fetchOptionalSha(MOD_URL + ".sha256");
+            File dest = new File(incomingDir, "sample_mod.zip");
+            boolean ok = downloadUrlToFile(MOD_URL, dest, expected);
+            if (!ok) {
+                return;
+            }
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    appendStatus("\nСкачано. Ставлю zip.");
+                    logLine("install sample_mod.zip");
+                    installZips();
+                }
+            });
+        } finally {
+            downloadRunning = false;
+        }
+    }
+
+    private boolean downloadUrlToFile(String url, File dest, String expectedHash) {
+        File part = new File(dest.getAbsolutePath() + ".part");
+        HttpURLConnection conn = null;
+        InputStream in = null;
+        FileOutputStream out = null;
+        boolean renamed = false;
+        try {
+            File parent = dest.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
+                postStatus("\nНет папки для " + dest.getName());
+                return false;
+            }
+            resetProgress();
+            conn = openGet(url);
             int code = conn.getResponseCode();
             if (code != HttpURLConnection.HTTP_OK) {
                 postStatus("\nСервер ответил " + code);
-                return;
+                return false;
             }
-            int total = conn.getContentLength();
+            long total = contentLength(conn);
             in = conn.getInputStream();
             out = new FileOutputStream(part);
             byte[] buf = new byte[8192];
-            int got = 0;
-            int lastPct = -1;
+            long got = 0;
+            long started = System.currentTimeMillis();
+            long lastUi = 0;
+            int lastLoggedPct = -10;
             int n;
             while ((n = in.read(buf)) >= 0) {
-                if (n == 0) {
+                if (n <= 0) {
                     continue;
                 }
                 out.write(buf, 0, n);
                 got += n;
-                if (total > 0) {
-                    int pct = (int) ((got * 100L) / total);
-                    if (pct != lastPct) {
-                        lastPct = pct;
-                        postStatus("\n" + pct + "%  скачано " + got + " / " + total);
-                    }
-                } else if (got == n || got % 32768 < n) {
-                    postStatus("\nскачано " + got + " / неизвестно");
+                long now = System.currentTimeMillis();
+                double speed = got / Math.max(0.001, (now - started) / 1000.0);
+                int pct = total > 0 ? (int) ((got * 100L) / total) : -1;
+                if (now - lastUi >= 200 || pct == 100) {
+                    lastUi = now;
+                    showProgress(got, total, speed);
+                }
+                if (pct >= 0 && pct / 10 != lastLoggedPct / 10) {
+                    lastLoggedPct = pct;
+                    postStatus("\n" + progressText(got, total, speed));
+                } else if (pct < 0 && got == n) {
+                    postStatus("\n" + progressText(got, total, speed));
                 }
             }
             out.flush();
             out.close();
             out = null;
+            double speed = got / Math.max(0.001, (System.currentTimeMillis() - started) / 1000.0);
+            showProgress(got, total, speed);
+            postStatus("\n" + progressText(got, total, speed));
             if (dest.exists() && !dest.delete()) {
-                postStatus("\nНе удалось заменить старый sample_mod.zip");
-                return;
+                postStatus("\nНе удалось заменить " + dest.getName());
+                return false;
             }
             if (!part.renameTo(dest)) {
-                postStatus("\nНе удалось записать sample_mod.zip");
-                return;
+                postStatus("\nНе удалось записать " + dest.getName());
+                return false;
             }
-            final int done = got;
-            final int size = total;
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (size > 0) {
-                        appendStatus("\n100%  скачано " + done + " / " + size);
-                    } else {
-                        appendStatus("\nскачано " + done + " / " + done);
-                    }
-                    appendStatus("\nСкачано. Ставлю zip.");
-                    logLine("downloaded sample_mod.zip bytes " + done);
-                    installZips();
-                }
-            });
+            renamed = true;
+            return acceptHash(dest, expectedHash);
         } catch (Exception e) {
             postStatus("\nСкачивание не удалось: " + messageOf(e));
             logLine("download failed " + messageOf(e));
+            return false;
         } finally {
-            downloadRunning = false;
             if (in != null) {
                 try {
                     in.close();
@@ -410,10 +434,180 @@ public class LauncherActivity extends Activity {
             if (conn != null) {
                 conn.disconnect();
             }
-            if (part.exists()) {
+            if (!renamed && part.exists()) {
                 part.delete();
             }
         }
+    }
+
+    private HttpURLConnection openGet(String url) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.setInstanceFollowRedirects(true);
+        conn.setConnectTimeout(20000);
+        conn.setReadTimeout(60000);
+        conn.setRequestProperty("User-Agent", "SideloadLab/1.0");
+        conn.connect();
+        return conn;
+    }
+
+    private long contentLength(HttpURLConnection conn) {
+        if (Build.VERSION.SDK_INT >= 24) {
+            long len = conn.getContentLengthLong();
+            return len > 0 ? len : -1L;
+        }
+        int len = conn.getContentLength();
+        return len > 0 ? len : -1L;
+    }
+
+    private String fetchOptionalSha(String url) {
+        HttpURLConnection conn = null;
+        try {
+            conn = openGet(url);
+            if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                return null;
+            }
+            InputStream in = conn.getInputStream();
+            byte[] buf = new byte[256];
+            int n = in.read(buf);
+            in.close();
+            if (n <= 0) {
+                return null;
+            }
+            return normalizeHash(new String(buf, 0, n, "UTF-8"));
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    private String normalizeHash(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String line = raw.trim().toLowerCase(Locale.US);
+        int nl = line.indexOf('\n');
+        if (nl >= 0) {
+            line = line.substring(0, nl).trim();
+        }
+        if (line.startsWith("sha256:")) {
+            line = line.substring("sha256:".length()).trim();
+        }
+        int space = line.indexOf(' ');
+        if (space > 0) {
+            line = line.substring(0, space);
+        }
+        if (line.length() != 64) {
+            return null;
+        }
+        return line;
+    }
+
+    private boolean acceptHash(File file, String expectedHash) {
+        String expected = normalizeHash(expectedHash);
+        if (expected == null) {
+            postStatus("\nхеш не задан, пропуск");
+            logLine("hash skipped " + file.getName());
+            return true;
+        }
+        try {
+            String actual = sha256(file);
+            if (expected.equals(actual)) {
+                postStatus("\nхеш совпал");
+                logLine("hash ok " + file.getName());
+                return true;
+            }
+            postStatus("\nфайл битый, качни снова");
+            logLine("hash mismatch " + file.getName());
+            file.delete();
+            return false;
+        } catch (Exception e) {
+            postStatus("\nНе удалось посчитать хеш: " + messageOf(e));
+            logLine("hash error " + messageOf(e));
+            file.delete();
+            return false;
+        }
+    }
+
+    private String sha256(File file) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        FileInputStream in = new FileInputStream(file);
+        try {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) >= 0) {
+                if (n > 0) {
+                    digest.update(buf, 0, n);
+                }
+            }
+        } finally {
+            in.close();
+        }
+        byte[] raw = digest.digest();
+        StringBuilder hex = new StringBuilder();
+        for (int i = 0; i < raw.length; i++) {
+            hex.append(String.format(Locale.US, "%02x", raw[i] & 0xff));
+        }
+        return hex.toString();
+    }
+
+    private void resetProgress() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (progressBar != null) {
+                    progressBar.setIndeterminate(false);
+                    progressBar.setMax(100);
+                    progressBar.setProgress(0);
+                }
+                if (progressLine != null) {
+                    progressLine.setText("");
+                }
+            }
+        });
+    }
+
+    private void showProgress(final long got, final long total, final double bytesPerSec) {
+        final String line = progressText(got, total, bytesPerSec);
+        final int pct = total > 0 ? (int) ((got * 100L) / total) : -1;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (progressLine != null) {
+                    progressLine.setText(line);
+                }
+                if (progressBar != null) {
+                    if (pct >= 0) {
+                        progressBar.setIndeterminate(false);
+                        progressBar.setMax(100);
+                        progressBar.setProgress(pct > 100 ? 100 : pct);
+                    } else {
+                        progressBar.setIndeterminate(true);
+                    }
+                }
+            }
+        });
+    }
+
+    private String progressText(long got, long total, double bytesPerSec) {
+        String speed = formatSpeed(bytesPerSec);
+        if (total > 0) {
+            int pct = (int) ((got * 100L) / total);
+            if (pct > 100) {
+                pct = 100;
+            }
+            return "скачано " + got + " / всего " + total + "  " + pct + "%  " + speed;
+        }
+        return "скачано " + got + " / всего неизвестно  " + speed;
+    }
+
+    private String formatSpeed(double bytesPerSec) {
+        if (bytesPerSec >= 1024.0 * 1024.0) {
+            return String.format(Locale.US, "%.1f МБ/с", bytesPerSec / (1024.0 * 1024.0));
+        }
+        return String.format(Locale.US, "%.0f КБ/с", bytesPerSec / 1024.0);
     }
 
     private void postStatus(final String line) {
