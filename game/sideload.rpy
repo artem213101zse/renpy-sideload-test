@@ -114,7 +114,7 @@ screen sideload_status():
             textbutton _("Запустить движок") action Function(run_hello_engine)
             text last_engine_line substitute False
 
-            textbutton _("Netplay") action ShowMenu("netplay")
+            textbutton _("Netplay") action ShowMenu("netplay_lobby")
 
 
 translate russian strings:

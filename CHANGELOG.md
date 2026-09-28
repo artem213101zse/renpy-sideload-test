@@ -66,4 +66,6 @@ Netplay: экран без доски, ходы текстом. Строка п�
 
 Сервер комнаты: `tools/netplay_server`, `docker compose up --build`, порт 7777. Оба игрока жмут «Подключиться к серверу» и сами делают connect. Хост в игре остаётся. Сервер повторяет строки как есть, молчуну шлёт `ping`, отвалившемуся сопернику — `opponent_left`.
 
+Netplay на два экрана: `netplay_lobby` (хост, гость, сервер, свой IP, статус) и `netplay_play` (только после connected: пинг, ходы, сдача). Поле хода до связи не создаётся. На Android ход через «Ввести ход» и `renpy.input`. Провал bind/connect/accept пишется на экран и в `netplay.log`: на телефоне `Documents/the_question_sideload/netplay.log`, на ПК `the_question/sideload/netplay.log`, с traceback, IP, портом и ролью. Connect ждёт 5 с. Поле гостя пустое, подсказка «IP хоста, не свой».
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.

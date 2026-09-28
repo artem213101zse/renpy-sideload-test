@@ -5,11 +5,14 @@
 
 from __future__ import print_function
 
+import os
 import socket
 import threading
 import time
+import traceback
 
 PORT = 7777
+CONNECT_TIMEOUT = 5
 
 
 def lan_ip():
@@ -71,6 +74,8 @@ class NetplayLink(object):
         self._last_pong = 0.0
         self._next_ping = 0.0
         self._timed_out = False
+        self._log_path = None
+        self._lan_ip = ""
 
     def drain(self):
         with self._lock:
@@ -87,6 +92,10 @@ class NetplayLink(object):
             thread = self._thread
         return thread is not None and thread.is_alive()
 
+    def set_log(self, path, lan_ip):
+        self._log_path = path
+        self._lan_ip = lan_ip or ""
+
     def host(self, port=PORT):
         gen = self._begin()
         thread = threading.Thread(target=self._host_main, args=(int(port), gen))
@@ -95,16 +104,16 @@ class NetplayLink(object):
             self._thread = thread
         thread.start()
 
-    def connect(self, ip, port=PORT):
+    def connect(self, ip, port=PORT, role="guest"):
         if isinstance(ip, unicode):
             ip = ip.encode("utf-8")
         ip = (ip or "").strip()
         gen = self._begin()
         if not ip:
-            self._emit("note empty ip")
-            self._emit("status timeout")
+            self._report(role, "", port, "empty ip")
             return
-        thread = threading.Thread(target=self._guest_main, args=(ip, int(port), gen))
+        thread = threading.Thread(
+            target=self._guest_main, args=(ip, int(port), gen, role))
         thread.daemon = True
         with self._lock:
             self._thread = thread
@@ -162,6 +171,44 @@ class NetplayLink(object):
         with self._lock:
             self._events.append(line)
 
+    def _report(self, role, ip, port, exc):
+        # Исключение не прячем: полный traceback в netplay.log,
+        # короткая строка уходит на экран.
+        if isinstance(exc, BaseException):
+            body = traceback.format_exc()
+            short = str(exc).replace("\n", " ").strip() or exc.__class__.__name__
+        else:
+            body = str(exc)
+            short = body.replace("\n", " ").strip()
+        self._write_log(role, ip, port, body)
+        self._emit("note " + role + " " + str(ip) + ":" + str(port) + " " + short)
+        self._emit("status timeout")
+
+    def _write_log(self, role, ip, port, body):
+        path = self._log_path
+        if not path:
+            self._emit("note netplay.log path empty")
+            return
+        try:
+            folder = os.path.dirname(path)
+            if folder and not os.path.isdir(folder):
+                os.makedirs(folder)
+            stamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            header = "role=%s ip=%s port=%s lan=%s\n" % (
+                role, ip, port, self._lan_ip)
+            text = stamp + " " + header + body
+            if isinstance(text, unicode):
+                text = text.encode("utf-8")
+            if not text.endswith("\n"):
+                text += "\n"
+            handle = open(path, "ab")
+            try:
+                handle.write(text)
+            finally:
+                handle.close()
+        except Exception as exc:
+            self._emit("note netplay.log " + str(exc))
+
     def _stopped(self):
         with self._lock:
             return self._stop
@@ -206,9 +253,8 @@ class NetplayLink(object):
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind(("0.0.0.0", port))
             server.listen(1)
-        except socket.error as exc:
-            self._emit("note " + str(exc))
-            self._emit("status timeout")
+        except Exception as exc:
+            self._report("host", "0.0.0.0", port, exc)
             _quiet_close(server)
             return
         server.settimeout(0.5)
@@ -224,8 +270,10 @@ class NetplayLink(object):
                 conn, _addr = server.accept()
             except socket.timeout:
                 continue
-            except socket.error:
+            except Exception as exc:
                 conn = None
+                if self._same_gen(gen) and not self._stopped():
+                    self._report("host", "0.0.0.0", port, exc)
                 break
             else:
                 break
@@ -238,12 +286,12 @@ class NetplayLink(object):
             return
         self._run_conn(conn, u"host", gen)
 
-    def _guest_main(self, ip, port, gen):
+    def _guest_main(self, ip, port, gen, role):
         try:
-            conn = socket.create_connection((ip, port), 5)
-        except socket.error as exc:
-            self._emit("note " + str(exc))
-            self._emit("status timeout")
+            # 5 секунд, не блокировать интерфейс дольше. Поток тот же.
+            conn = socket.create_connection((ip, port), CONNECT_TIMEOUT)
+        except Exception as exc:
+            self._report(role, ip, port, exc)
             return
         if not self._same_gen(gen) or self._stopped():
             _quiet_close(conn)

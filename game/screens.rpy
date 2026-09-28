@@ -327,7 +327,7 @@ screen navigation():
         textbutton _("Sideload") action ShowMenu("sideload_status")
 
         ## LAN moves only. The socket is not the hello engine.
-        textbutton _("Netplay") action ShowMenu("netplay")
+        textbutton _("Netplay") action ShowMenu("netplay_lobby")
 
         if renpy.android:
             textbutton _("BIOS") action Function(open_sideload_bios)
