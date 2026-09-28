@@ -53,7 +53,8 @@ class NetplayLink(object):
     """Один TCP-сеанс. Кадр протокола: строка UTF-8 и \\n.
 
     ping <ms> / pong <тот же ms> / hello host|guest / move <текст> /
-    resign / quit. Легальность хода не проверяется.
+    resign / quit. Сервер комнаты может прислать opponent_left.
+    Легальность хода не проверяется.
     """
 
     def __init__(self):
@@ -341,7 +342,7 @@ class NetplayLink(object):
             if move:
                 self._emit(u"move " + move)
             return
-        if line == u"resign" or line == u"quit":
+        if line == u"resign" or line == u"quit" or line == u"opponent_left":
             self._emit("status opponent left")
             self._stop_now()
             return

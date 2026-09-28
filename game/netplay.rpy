@@ -12,6 +12,8 @@ init python:
     netplay_ip = "127.0.0.1"
     netplay_port = netplay_link.PORT
     netplay_ip_input = u"127.0.0.1"
+    netplay_server_ip = u"127.0.0.1"
+    netplay_server_port = u"7777"
     netplay_move_input = u""
     netplay_note = u""
 
@@ -48,6 +50,19 @@ init python:
     def netplay_start_guest():
         netplay_reset_view()
         netplay_link.get_link().connect(store.netplay_ip_input, store.netplay_port)
+
+    def netplay_start_server():
+        netplay_reset_view()
+        text = _netplay_text(store.netplay_server_port).strip()
+        try:
+            port = int(text)
+        except Exception:
+            port = 0
+        if port < 1 or port > 65535:
+            store.netplay_status = "timeout"
+            store.netplay_note = u"порт"
+            return
+        netplay_link.get_link().connect(store.netplay_server_ip, port)
 
     def netplay_resign():
         netplay_link.get_link().close(goodbye=u"resign")
@@ -106,6 +121,15 @@ screen netplay():
                 value VariableInputValue("netplay_ip_input")
                 length 64
             textbutton _("Connect") action Function(netplay_start_guest)
+
+            text _("Сервер")
+            input:
+                value VariableInputValue("netplay_server_ip")
+                length 64
+            input:
+                value VariableInputValue("netplay_server_port")
+                length 5
+            textbutton _("Подключиться к серверу") action Function(netplay_start_server)
 
             text "[netplay_status]"
             text "Пинг: [netplay_ping_ms] мс"
