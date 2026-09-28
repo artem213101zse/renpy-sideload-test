@@ -326,6 +326,9 @@ screen navigation():
         ## Sideload folder status. The folder itself is attached in sideload.rpe.
         textbutton _("Sideload") action ShowMenu("sideload_status")
 
+        ## LAN moves only. The socket is not the hello engine.
+        textbutton _("Netplay") action ShowMenu("netplay")
+
         if renpy.android:
             textbutton _("BIOS") action Function(open_sideload_bios)
             if bios_open_note:

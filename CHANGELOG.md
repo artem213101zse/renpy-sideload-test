@@ -62,4 +62,6 @@ HTML BIOS: плитки в две колонки, на узком экране �
 
 HTML на диске: лаунчер пишет `getFilesDir()/bios_www/` и открывает `file://` этого `index.html`, не `android_asset`. Байты по очереди: `android_asset/www`, иначе `Documents/the_question_sideload/bios_www`, иначе `R.raw` (`bios_index.html`, `bios_styles.css`, `bios_app.js`). Те же три файла лежат в `game/bios_www/` и пакуются Ren'Py; Java x-assets игры не читает. В `launcher.log` полный путь и `exists=true/false`. Если файла нет, `loadUrl` не вызывается.
 
+Netplay: экран без доски, ходы текстом. Строка протокола и `\n`: `ping <мс>`, `pong <тот же мс>`, `hello host|guest`, `move e2e4`, `resign`, `quit`. Хост слушает `0.0.0.0:7777`. IP на экране — локальный адрес маршрута (UDP connect к 8.8.8.8, без пакета), иначе первый не-loopback IPv4, иначе `127.0.0.1`. Пинг раз в секунду, тишина 3 с — `timeout`. Сокет в отдельном потоке. `hello_engine` из комнаты не вызывается.
+
 Уведомления: канал `sideload_lab`. «Сейчас» и будильник на 30 сек через AlarmManager в процесс лаунчера, тап открывает BIOS. `POST_NOTIFICATIONS` не добавлен: targetSdk 30.
