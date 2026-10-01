@@ -5,6 +5,8 @@
 # поэтому в scripts.rpa рядом с исходником лежит .rpyc этой же сборки.
 # Способ 2 — кнопка. Она вызывает tools/rpa_extract.py и пишет файлы
 # рядом с README, даже если способ 1 архив не открыл.
+# Картинка с диска: loadable("lab_from_rpa.png") на Android часто ложь,
+# хотя файл уже лежит в Documents. Экран тогда берёт полный путь.
 
 default rpa_extract_note = ""
 
@@ -91,6 +93,68 @@ init python:
         if error or index is None:
             return name + u":\n" + _rpa_text(error)
         return name + u": opened"
+
+    def _rpa_disk_png():
+        root = getattr(renpy.config, "sideload_path", None)
+        if not root:
+            return None
+        full = os.path.join(root, "lab_from_rpa.png")
+        if os.path.exists(full):
+            return full
+        nested = os.path.join(root, "images", "lab_from_rpa.png")
+        if os.path.exists(nested):
+            return nested
+        return None
+
+    def _rpa_same_path(asked, full):
+        def norm(value):
+            text = _rpa_text(value).replace(u"\\", u"/")
+            while text.startswith(u"/"):
+                text = text[1:]
+            return os.path.normcase(text)
+        return norm(asked) == norm(full)
+
+    def _rpa_open_disk_png(name):
+        # im.Image грузит через loader.load, а тот срезает ведущий «/».
+        # Для этого одного файла открываем Documents напрямую.
+        # Остальные имена уходят прежнему callback и дальше в архивы.
+        full = _rpa_disk_png()
+        if full and _rpa_same_path(name, full):
+            return open(full, "rb")
+        previous = getattr(_rpa_open_disk_png, "_previous", None)
+        if previous:
+            return previous(name)
+        return None
+
+    _rpa_open_disk_png._previous = renpy.config.file_open_callback
+    renpy.config.file_open_callback = _rpa_open_disk_png
+
+    def rpa_png_image_path():
+        full = _rpa_disk_png()
+        if not full:
+            return u""
+        return _rpa_text(full).replace(u"\\", u"/")
+
+    def rpa_png_status():
+        try:
+            if renpy.loadable("lab_from_rpa.png"):
+                bare = u"да"
+            else:
+                bare = u"нет"
+            if renpy.loadable("images/lab_from_rpa.png"):
+                nested = u"да"
+            else:
+                nested = u"нет"
+            lines = [
+                u"loadable lab_from_rpa.png: " + bare,
+                u"loadable images/lab_from_rpa.png: " + nested,
+            ]
+            full = _rpa_disk_png()
+            if full:
+                lines.append(_rpa_text(full))
+            return u"\n".join(lines)
+        except Exception:
+            return _rpa_text(traceback.format_exc())
 
     def _rpa_log(path, text):
         try:

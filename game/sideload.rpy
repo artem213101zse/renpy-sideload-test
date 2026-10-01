@@ -122,8 +122,15 @@ screen sideload_status():
             if renpy.has_label("lab_from_rpa"):
                 textbutton "Start" action Start("lab_from_rpa")
 
-            if renpy.loadable("lab_from_rpa.png"):
+            $ rpa_png_line = rpa_png_status()
+            $ rpa_png_path = rpa_png_image_path()
+            text rpa_png_line substitute False
+            if rpa_png_path:
+                add im.image(rpa_png_path) xalign 0.5 ysize 180
+            elif renpy.loadable("lab_from_rpa.png"):
                 add "lab_from_rpa.png" xalign 0.5 ysize 180
+            elif renpy.loadable("images/lab_from_rpa.png"):
+                add "images/lab_from_rpa.png" xalign 0.5 ysize 180
 
             textbutton "Распаковать rpa в sideload" action Function(rpa_extract_sideload)
             if rpa_extract_note:
