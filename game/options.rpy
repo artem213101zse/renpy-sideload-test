@@ -191,6 +191,13 @@ init python:
     ## package. "all" is the 7.4.11 file list used by the android build.
     build.classify('game/**.rpe', 'all')
 
+    ## Lab archives are a Documents/sideload experiment. They stay in
+    ## tools/ and incoming/ and must not be packed into the APK.
+    ## Do not classify game/**.rpy or game/**.png into an archive here:
+    ## a normal build of The Question would then hide its own scripts.
+    build.classify('tools/**.rpa', None)
+    build.classify('incoming/**.rpa', None)
+
     ## To archive files, classify them as 'archive'.
 
     # build.classify('game/**.png', 'archive')

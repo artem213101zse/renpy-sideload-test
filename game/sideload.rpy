@@ -114,6 +114,21 @@ screen sideload_status():
             textbutton _("Запустить движок") action Function(run_hello_engine)
             text last_engine_line substitute False
 
+            $ rpa_scripts_line = rpa_archive_line("scripts.rpa")
+            $ rpa_images_line = rpa_archive_line("images.rpa")
+            text rpa_scripts_line substitute False
+            text rpa_images_line substitute False
+
+            if renpy.has_label("lab_from_rpa"):
+                textbutton "Start" action Start("lab_from_rpa")
+
+            if renpy.loadable("lab_from_rpa.png"):
+                add "lab_from_rpa.png" xalign 0.5 ysize 180
+
+            textbutton "Распаковать rpa в sideload" action Function(rpa_extract_sideload)
+            if rpa_extract_note:
+                text rpa_extract_note substitute False
+
             textbutton _("Netplay") action ShowMenu("netplay_lobby")
 
 

@@ -4,6 +4,11 @@
 # Ren'Py 7.4.11 собирает список .rpy по config.searchpath внутри Script(),
 # и это происходит раньше любого init python. Этот файл лежит в
 # game/sideload.rpe и выполняется до сканирования.
+# Скрипты и картинки в .rpa: main() после этого хука сам добавляет
+# каждый *.rpa с searchpath в config.archives и вызывает index_archives.
+# Это тот же путь, что у game/archive.rpa. Хук только не даёт битому
+# sideload-архиву оборвать старт и не грузит scripts.rpa повторно,
+# если lab_from_rpa.rpy уже лежит рядом россыпью.
 #
 # Куда класть файлы:
 #   ПК: <папка проекта>/sideload
@@ -76,6 +81,89 @@ def _remember_path(path):
         _log("could not set sideload_path\n" + traceback.format_exc())
 
 
+def _install_rpa_guard(sideload_path):
+    # renpy/main.py после .rpe делает то же для archive.rpa:
+    #   renpy.config.archives.append(base)
+    #   renpy.config.archives.reverse()
+    #   renpy.loader.index_archives()
+    # base — имя без .rpa. index_archives открывает файл через transfn
+    # и RPAv3ArchiveHandler.read_index, без распаковки.
+    import renpy
+    import renpy.loader as loader
+
+    if getattr(loader.index_archives, "_sideload_rpa_guard", False):
+        return
+
+    orig = loader.index_archives
+    orig_transfn = loader.transfn
+
+    def guarded_index_archives():
+        if not hasattr(renpy.config, "sideload_rpa_trace"):
+            renpy.config.sideload_rpa_trace = {}
+        root = os.path.normcase(os.path.normpath(sideload_path))
+        loose = os.path.isfile(os.path.join(sideload_path, "lab_from_rpa.rpy"))
+        for base in ("scripts", "images"):
+            full = os.path.join(sideload_path, base + ".rpa")
+            if os.path.isfile(full) and base not in renpy.config.archives:
+                renpy.config.archives.append(base)
+        if loose:
+            renpy.config.archives = [
+                name for name in renpy.config.archives if name != "scripts"
+            ]
+
+        last = {"path": None, "name": None}
+
+        def tracking(name):
+            last["name"] = name
+            path = orig_transfn(name)
+            last["path"] = path
+            return path
+
+        loader.transfn = tracking
+        removed = set()
+        try:
+            tries = 0
+            while tries < 6:
+                tries += 1
+                last["path"] = None
+                last["name"] = None
+                loader.old_config_archives = None
+                try:
+                    orig()
+                    break
+                except Exception:
+                    tb = traceback.format_exc()
+                    path = last["path"]
+                    name = last["name"] or ""
+                    base, ext = os.path.splitext(name)
+                    inside = False
+                    if path:
+                        norm = os.path.normcase(os.path.normpath(path))
+                        inside = norm.startswith(root + os.sep)
+                    if inside and base and base not in removed:
+                        renpy.config.sideload_rpa_trace[base + ext] = tb
+                        _log("rpa fail " + base + ext + "\n" + tb)
+                        renpy.config.archives = [
+                            item for item in renpy.config.archives if item != base
+                        ]
+                        removed.add(base)
+                        continue
+                    raise
+            else:
+                raise Exception("sideload rpa index retries exceeded")
+        finally:
+            loader.transfn = orig_transfn
+
+        found = []
+        for item in loader.archives:
+            if item and item[0] in ("scripts.rpa", "images.rpa"):
+                found.append(item[0])
+        _log("rpa indexed " + ",".join(found))
+
+    guarded_index_archives._sideload_rpa_guard = True
+    loader.index_archives = guarded_index_archives
+
+
 def _run_hook():
     _log("hook start")
     import renpy
@@ -131,6 +219,11 @@ def _run_hook():
         _log("searchpath dump failed\n" + traceback.format_exc())
 
     _log("ready " + str(bool(renpy.config.sideload_ready)))
+    try:
+        _install_rpa_guard(path)
+        _log("rpa guard installed")
+    except Exception:
+        _log("rpa guard failed\n" + traceback.format_exc())
     _log("hook end")
 
 

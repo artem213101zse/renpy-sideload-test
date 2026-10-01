@@ -15,3 +15,5 @@
 Подключение делает game/sideload.rpe.
 Исходник хука: sideload_src/autorun.py
 Собрать rpe заново: python sideload_src/build_sideload_rpe.py
+
+build.archive("scripts", "all") build.classify("game/**.rpy", "scripts") build.archive("images", "all") build.classify("game/**.png", "images")
